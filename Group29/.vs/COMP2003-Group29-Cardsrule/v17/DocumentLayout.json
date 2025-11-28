@@ -1,0 +1,37 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\marti\\OneDrive - University of Plymouth\\YEAR 2\\Unity-test\\COMP2003-Group29-Cardsrule\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{EBABC1C3-02F7-EDBF-5532-EFD54CB2EA59}|Assembly-CSharp.csproj|c:\\users\\marti\\onedrive - university of plymouth\\year 2\\unity-test\\comp2003-group29-cardsrule\\assets\\geminimanager\\scripts\\unityandgeminiv3.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{EBABC1C3-02F7-EDBF-5532-EFD54CB2EA59}|Assembly-CSharp.csproj|solutionrelative:assets\\geminimanager\\scripts\\unityandgeminiv3.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "UnityAndGeminiV3.cs",
+              "DocumentMoniker": "C:\\Users\\marti\\OneDrive - University of Plymouth\\YEAR 2\\Unity-test\\COMP2003-Group29-Cardsrule\\Assets\\GeminiManager\\Scripts\\UnityAndGeminiV3.cs",
+              "RelativeDocumentMoniker": "Assets\\GeminiManager\\Scripts\\UnityAndGeminiV3.cs",
+              "ToolTip": "C:\\Users\\marti\\OneDrive - University of Plymouth\\YEAR 2\\Unity-test\\COMP2003-Group29-Cardsrule\\Assets\\GeminiManager\\Scripts\\UnityAndGeminiV3.cs",
+              "RelativeToolTip": "Assets\\GeminiManager\\Scripts\\UnityAndGeminiV3.cs",
+              "ViewState": "AgIAAE8AAAAAAAAAAAAYwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-28T17:40:24.776Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
