@@ -1,3 +1,143 @@
+/* new code  - start  */
+
+
+// Updated Unity Gemini Card AI (loads test data from Assets directory)
+using System;
+using System.Collections.Generic;
+using System.Text;
+using UnityEngine;
+using UnityEngine.Networking;
+using TMPro;
+
+[Serializable]
+public class GeminiRules
+{
+    public string rule1 = "Highest card wins";
+    public string rule2 = "Jokers are wild";
+    public string rule3 = "Do not use the value of the stack card in the decision";
+}
+
+[Serializable]
+public class GeminiRequest
+{
+    public List<string> playerHand;     // Player 1's hand only
+    public string discardTop;           // Top card of discard pile
+    public GeminiRules rules;           // Rules object
+}
+
+[Serializable]
+public class GeminiResponse
+{
+    public string action;  // "take_discard" or "take_stack"
+    public string card;    // Which card was taken
+}
+
+public class UnityGeminiCardAI : MonoBehaviour
+{
+    public string testJsonFileName = "test_cardgame.json"; // File in Assets/ directory
+    public TextAsset jsonApi; // API key file stays as TextAsset
+    public TMP_Text uiText;
+
+    [Serializable]
+    private class ApiKeyWrapper { public string key; }
+
+    private string apiKey;
+
+    void Awake()
+    {
+        if (jsonApi != null)
+            apiKey = JsonUtility.FromJson<ApiKeyWrapper>(jsonApi.text).key;
+    }
+
+    [ContextMenu("Test Gemini Call")]
+    public void LoadAndSendTestData()
+    {
+        string path = System.IO.Path.Combine(Application.dataPath, testJsonFileName);
+        if (!System.IO.File.Exists(path))
+        {
+            uiText.text = "Test JSON not found at: " + path;
+            return;
+        }
+
+        string json = System.IO.File.ReadAllText(path);
+        GeminiRequest request = JsonUtility.FromJson<GeminiRequest>(json);
+        SendToGemini(request);
+    }
+
+    public void SendToGemini(GeminiRequest req)
+    {
+        string prompt = BuildPrompt(req);
+        StartCoroutine(SendGeminiRequest(prompt));
+    }
+
+    private string BuildPrompt(GeminiRequest req)
+    {
+        return "You are an AI card decision system. Given the player's hand, top discard card, and rules, return ONLY a JSON object with 'action' and 'card'." +
+            "Rules: Highest card wins. Jokers are wild. Do NOT use the value of the unknown stack card." +
+            JsonUtility.ToJson(req);
+    }
+
+    private IEnumerator<UnityWebRequestAsyncOperation> SendGeminiRequest(string prompt)
+    {
+        string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + apiKey;
+
+        var requestJson = "{\"contents\":[{\"parts\":[{\"text\":\"" + EscapeJson(prompt) + "\"}]}]}";
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(requestJson);
+        UnityWebRequest req = new UnityWebRequest(url, "POST");
+        req.uploadHandler = new UploadHandlerRaw(bodyRaw);
+        req.downloadHandler = new DownloadHandlerBuffer();
+        req.SetRequestHeader("Content-Type", "application/json");
+
+        yield return req.SendWebRequest();
+
+        if (req.result != UnityWebRequest.Result.Success)
+        {
+            uiText.text = "Error: " + req.error;
+            yield break;
+        }
+
+        string response = req.downloadHandler.text;
+        GeminiResponse parsed = TryParseGeminiResponse(response);
+
+        if (parsed != null)
+            uiText.text = $"Action: {parsed.action} Card: { parsed.card}";
+        else
+            uiText.text = "Gemini returned malformed JSON:" + response;
+    }
+
+    private GeminiResponse TryParseGeminiResponse(string json)
+    {
+        try
+        {
+            int start = json.IndexOf('{');
+            int end = json.LastIndexOf('}');
+            if (start >= 0 && end > start)
+            {
+                string inner = json.Substring(start, end - start + 1);
+                return JsonUtility.FromJson<GeminiResponse>(inner);
+            }
+        }
+        catch { }
+        return null;
+    }
+
+    private string EscapeJson(string s)
+    {
+        return s.Replace("\","\\").Replace("\"","\\"").Replace("","\n");
+                
+    }
+}
+
+
+
+/* new code - end  */
+
+/* ----------------------------------------------------------------------------------------- */
+
+
+
+
+/* Original demo code. Left in for reference.
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -479,4 +619,4 @@ public class UnityAndGeminiV3: MonoBehaviour
 }
 
 
-
+*/
