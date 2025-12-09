@@ -1,90 +1,179 @@
 /* new code  - start  */
 
 
-// Updated Unity Gemini Card AI (loads test data from Assets directory)
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
-using TMPro;
+
+// ---------------------------------------------
+// GAME STRUCTURES
+// ---------------------------------------------
 
 [Serializable]
 public class GeminiRules
 {
-    public string rule1 = "Highest card wins";
-    public string rule2 = "Jokers are wild";
-    public string rule3 = "Do not use the value of the stack card in the decision";
+    public List<string> rules;
 }
 
 [Serializable]
 public class GeminiRequest
 {
-    public List<string> playerHand;     // Player 1's hand only
-    public string discardTop;           // Top card of discard pile
-    public GeminiRules rules;           // Rules object
+    public string gameId;
+    public string instruction;
+    public GeminiRules rules;
+    public List<string> playerHand;
+    public string discardTop;
+    public List<string> stack; // Will be masked ("unknown")
 }
 
 [Serializable]
-public class GeminiResponse
+public class GeminiGameResponse
 {
-    public string action;  // "take_discard" or "take_stack"
-    public string card;    // Which card was taken
+    public string action; // "take_discard" or "take_stack"
+    public string card;   // card placed back onto discard pile
 }
+
+// ---------------------------------------------
+// GEMINI REQUEST PAYLOAD STRUCTURES (clean JSON)
+// ---------------------------------------------
+
+[Serializable]
+public class GeminiPart
+{
+    public string text;
+}
+
+[Serializable]
+public class GeminiContent
+{
+    public GeminiPart[] parts;
+}
+
+[Serializable]
+public class GeminiRequestWrapper
+{
+    public GeminiContent[] contents;
+}
+
+// ---------------------------------------------
+// GEMINI RESPONSE STRUCTURES
+// ---------------------------------------------
+
+[Serializable]
+public class GeminiCandidateText
+{
+    public GeminiContent content;
+}
+
+[Serializable]
+public class GeminiTextResponse
+{
+    public GeminiCandidateText[] candidates;
+}
+
+// ---------------------------------------------
+// MAIN CLASS
+// ---------------------------------------------
 
 public class UnityGeminiCardAI : MonoBehaviour
 {
-    public string testJsonFileName = "test_cardgame.json"; // File in Assets/ directory
-    public TextAsset jsonApi; // API key file stays as TextAsset
-    public TMP_Text uiText;
+    public string apiKey = "";      // Set in Inspector
+    public TMP_Text uiText;         // UI Text output field
 
-    [Serializable]
-    private class ApiKeyWrapper { public string key; }
-
-    private string apiKey;
+    private const string GEMINI_URL =
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=";
 
     void Awake()
     {
-        if (jsonApi != null)
-            apiKey = JsonUtility.FromJson<ApiKeyWrapper>(jsonApi.text).key;
+        // No file loading anymore — everything is internal
     }
 
-    [ContextMenu("Test Gemini Call")]
-    public void LoadAndSendTestData()
+    // -------------------------------------------------
+    // TEST BUTTON — appears in Inspector
+    // -------------------------------------------------
+    [ContextMenu("Run Test Move")]
+    public void RunTestMove()
     {
-        string path = System.IO.Path.Combine(Application.dataPath, testJsonFileName);
-        if (!System.IO.File.Exists(path))
+        GeminiRequest request = new GeminiRequest
         {
-            uiText.text = "Test JSON not found at: " + path;
-            return;
-        }
+            gameId = "game_001",
+            instruction = "take your go",
+            rules = new GeminiRules
+            {
+                rules = new List<string> {
+                    "Highest card wins",
+                    "Jokers are wild",
+                    "Do not use the value of the stack card in the decision"
+                }
+            },
+            playerHand = new List<string> { "5H", "9C", "JD" },
+            discardTop = "7S",
+            stack = new List<string> { "KH", "3C", "JD" } // WILL BE MASKED
+        };
 
-        string json = System.IO.File.ReadAllText(path);
-        GeminiRequest request = JsonUtility.FromJson<GeminiRequest>(json);
         SendToGemini(request);
     }
 
-    public void SendToGemini(GeminiRequest req)
+    // -------------------------------------------------
+    // Build sanitized prompt
+    // -------------------------------------------------
+
+    private string BuildPrompt(GeminiRequest request)
     {
-        string prompt = BuildPrompt(req);
-        StartCoroutine(SendGeminiRequest(prompt));
+
+        // Mask stack values BEFORE sending to the model
+        List<string> maskedStack = new List<string>();
+        foreach (var _ in request.stack)
+            maskedStack.Add("unknown");
+        request.stack = maskedStack;
+
+        return
+            "You are an AI deciding the player's next move in a card game. " +
+            "Return ONLY a pure JSON object with fields 'action' and 'card'.\n" +
+            "Do not explain. Do not add text.\n\n" +
+            JsonUtility.ToJson(request);
     }
 
-    private string BuildPrompt(GeminiRequest req)
+    // -------------------------------------------------
+    // Send to Gemini
+    // -------------------------------------------------
+
+    public void SendToGemini(GeminiRequest request)
     {
-        return "You are an AI card decision system. Given the player's hand, top discard card, and rules, return ONLY a JSON object with 'action' and 'card'." +
-            "Rules: Highest card wins. Jokers are wild. Do NOT use the value of the unknown stack card." +
-            JsonUtility.ToJson(req);
+
+        string prompt = BuildPrompt(request);
+
+        GeminiRequestWrapper wrapper = new GeminiRequestWrapper
+        {
+            contents = new[] {
+                new GeminiContent {
+                    parts = new[] {
+                        new GeminiPart { text = prompt }
+                    }
+                }
+            }
+        };
+
+        string jsonPayload = JsonUtility.ToJson(wrapper);
+
+        StartCoroutine(SendGeminiRequest(jsonPayload));
     }
 
-    private IEnumerator<UnityWebRequestAsyncOperation> SendGeminiRequest(string prompt)
-    {
-        string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + apiKey;
+    // -------------------------------------------------
+    // HTTP REQUEST (clean)
+    // -------------------------------------------------
 
-        var requestJson = "{\"contents\":[{\"parts\":[{\"text\":\"" + EscapeJson(prompt) + "\"}]}]}";
-        byte[] bodyRaw = Encoding.UTF8.GetBytes(requestJson);
+    private IEnumerator SendGeminiRequest(string jsonPayload)
+    {
+
+        string url = GEMINI_URL + apiKey;
+
         UnityWebRequest req = new UnityWebRequest(url, "POST");
-        req.uploadHandler = new UploadHandlerRaw(bodyRaw);
+        req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(jsonPayload));
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
 
@@ -92,42 +181,55 @@ public class UnityGeminiCardAI : MonoBehaviour
 
         if (req.result != UnityWebRequest.Result.Success)
         {
-            uiText.text = "Error: " + req.error;
+            uiText.text = "Gemini Error:\n" + req.error;
             yield break;
         }
 
-        string response = req.downloadHandler.text;
-        GeminiResponse parsed = TryParseGeminiResponse(response);
-
-        if (parsed != null)
-            uiText.text = $"Action: {parsed.action} Card: { parsed.card}";
-        else
-            uiText.text = "Gemini returned malformed JSON:" + response;
+        HandleGeminiResponse(req.downloadHandler.text);
     }
 
-    private GeminiResponse TryParseGeminiResponse(string json)
+    // -------------------------------------------------
+    // RESPONSE HANDLER
+    // -------------------------------------------------
+
+    private void HandleGeminiResponse(string json)
     {
-        try
+
+        GeminiTextResponse response =
+            JsonUtility.FromJson<GeminiTextResponse>(json);
+
+        if (response == null ||
+            response.candidates == null ||
+            response.candidates.Length == 0)
         {
-            int start = json.IndexOf('{');
-            int end = json.LastIndexOf('}');
-            if (start >= 0 && end > start)
-            {
-                string inner = json.Substring(start, end - start + 1);
-                return JsonUtility.FromJson<GeminiResponse>(inner);
-            }
-        }
-        catch { }
-        return null;
-    }
 
-    private string EscapeJson(string s)
-    {
-        return s.Replace("\","\\").Replace("\"","\\"").Replace("","\n");
-                
+            uiText.text = "Malformed Gemini response:\n" + json;
+            return;
+        }
+
+        string modelText = response.candidates[0]
+            .content.parts[0].text;
+
+        // Extract only the JSON inside model text
+        int start = modelText.IndexOf('{');
+        int end = modelText.LastIndexOf('}');
+
+        if (start < 0 || end <= start)
+        {
+            uiText.text = "Could not extract JSON:\n" + modelText;
+            return;
+        }
+
+        string extracted = modelText.Substring(start, end - start + 1);
+
+        GeminiGameResponse gameResponse =
+            JsonUtility.FromJson<GeminiGameResponse>(extracted);
+
+        uiText.text =
+            $"Action: {gameResponse.action}\n" +
+            $"Card: {gameResponse.card}";
     }
 }
-
 
 
 /* new code - end  */
