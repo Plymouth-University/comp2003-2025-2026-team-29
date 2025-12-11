@@ -28,8 +28,9 @@ public class GeminiRequest
 [Serializable]
 public class GeminiResponse
 {
-    public string action;
-    public string discardReturn;
+    public string action;          // "takeDiscard" or "takeStack"
+    public string discardReturn;   // the card placed onto discard pile AFTER action
+    public List<string> updatedHand; // player hand AFTER the go
 }
 
 public class UnityGeminiCardAI : MonoBehaviour
@@ -89,7 +90,7 @@ public class UnityGeminiCardAI : MonoBehaviour
                     "The discarded card cannot be the one just selected in this turn."
                 }
             },
-            playerHand = new List<string> { "5H", "9C", "JD" },
+            playerHand = new List<string> { "5H", "9C", "JD", "3H", "2S", "4D" },
             discardTop = "7S",
             stack = new List<string> { "3D", "4S", "JH", "QD" }
         };
@@ -111,7 +112,7 @@ public class UnityGeminiCardAI : MonoBehaviour
 
     private string BuildPrompt(GeminiRequest req)
     {
-        return "You are an AI card decision engine. Return ONLY JSON with fields 'action' and 'discardReturn'." +
+        return "You are an AI card decision engine. Return ONLY JSON with fields 'action', 'discardReturn' and 'updatedHand." +
                JsonUtility.ToJson(req);
     }
 
@@ -263,7 +264,19 @@ public class UnityGeminiCardAI : MonoBehaviour
         }
 
         // 6) Display concise result and log full details
-        string uiOut = $"Action: {parsed.action}\nReturn Card: {parsed.discardReturn}";
+        string handList = (parsed.updatedHand != null)
+            ? string.Join(", ", parsed.updatedHand)
+            : "(no data)";
+
+        string uiOut =
+            $"Action: {parsed.action}\n" +
+            $"Return Card: {parsed.discardReturn}\n" +
+            $"Updated Hand: {handList}";
+
+
+        // string uiOut = $"Action: {parsed.action}\nReturn Card: {parsed.discardReturn}";
+
+
         if (uiText != null) uiText.text = uiOut;
         Log("Parsed game response: " + uiOut);
     }
