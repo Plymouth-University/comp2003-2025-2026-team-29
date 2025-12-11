@@ -67,21 +67,31 @@ public class UnityGeminiCardAI : MonoBehaviour
     // -------------------- TEST CALL --------------------
     public void CallGemini()
     {
+        
+        Log("Button clicked — sending request to Gemini...");
+
         GeminiRequest req = new GeminiRequest
         {
-            gameId = Guid.NewGuid().ToString(),
-            instruction = "take your go",
+            gameId = "GAME-001",
+            instruction = "You are a player in a card game."+
+                          "The gameId is an identifier for the game." +
+                          "Using the rules listed in 'rules', and the cards in your hand, denoted by"+
+                          "'playerHand' and the card shown on the discard pile, denoted as 'discardTop',"+
+                          "you need to take your go and return the details.",
             rules = new GeminiRules
             {
                 rules = new List<string> {
                     "Highest card wins",
                     "Jokers are wild",
-                    "Do not use value of stack card"
+                    "Do not use value of stack card in decision",
+                    "Card can be taken from discard pile or first card from the stack, not from both",
+                    "A card must be discarded from your hand to end your go.",
+                    "The discarded card cannot be the one just selected in this turn."
                 }
             },
             playerHand = new List<string> { "5H", "9C", "JD" },
             discardTop = "7S",
-            stack = new List<string> { "XX", "XX", "XX" }
+            stack = new List<string> { "3D", "4S", "JH", "QD" }
         };
 
         SendToGemini(req);
@@ -107,7 +117,7 @@ public class UnityGeminiCardAI : MonoBehaviour
 
     private IEnumerator<UnityWebRequestAsyncOperation> SendGeminiRequest(string prompt)
     {
-        string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + apiKey;
+        string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
 
         string sendJson = $"{{ \"contents\": [ {{ \"parts\": [ {{ \"text\": \"{EscapeJson(prompt)}\" }} ] }} ] }}";
         byte[] bodyRaw = Encoding.UTF8.GetBytes(sendJson);
@@ -130,37 +140,139 @@ public class UnityGeminiCardAI : MonoBehaviour
     }
 
     // -------------------- HANDLE RESPONSE --------------------
-    private void HandleGeminiResponse(string json)
+    private void HandleGeminiResponse(string apiResponseJson)
     {
-        Log("RAW RESPONSE:" + json);
+        Log("RAW RESPONSE:\n" + apiResponseJson);
 
-        int s = json.IndexOf('{');
-        int e = json.LastIndexOf('}');
-
-        if (s < 0 || e < s)
+        // 1) Try to extract the model 'text' field directly from the JSON wrapper by scanning for "text": "...."
+        string modelText = null;
+        string needle = "\"text\"";
+        int idx = apiResponseJson.IndexOf(needle, StringComparison.OrdinalIgnoreCase);
+        if (idx >= 0)
         {
-            uiText.text = "Malformed response";
+            // find the colon after "text"
+            int colon = apiResponseJson.IndexOf(':', idx);
+            if (colon >= 0)
+            {
+                // find the first double quote that starts the string value
+                int quoteStart = apiResponseJson.IndexOf('"', colon);
+                // If quoteStart points to the quote that ends the property name, find the next quote
+                // Move to the first quote that starts the value (skip whitespace and possible ':' and spaces)
+                while (quoteStart >= 0 && (quoteStart <= colon || apiResponseJson[quoteStart - 1] == '\\'))
+                {
+                    quoteStart = apiResponseJson.IndexOf('"', quoteStart + 1);
+                }
+
+                if (quoteStart >= 0)
+                {
+                    // Now find the matching closing quote, handling escaped quotes (\")
+                    int i = quoteStart + 1;
+                    StringBuilder sb = new StringBuilder();
+                    bool closed = false;
+                    while (i < apiResponseJson.Length)
+                    {
+                        char c = apiResponseJson[i];
+                        if (c == '\\' && i + 1 < apiResponseJson.Length)
+                        {
+                            // take escape sequence as literal (\" , \\ , \n etc.)
+                            char next = apiResponseJson[i + 1];
+                            if (next == 'n') sb.Append('\n');
+                            else if (next == 'r') sb.Append('\r');
+                            else if (next == 't') sb.Append('\t');
+                            else sb.Append(next); // \" \\ or others
+                            i += 2;
+                            continue;
+                        }
+                        if (c == '"')
+                        {
+                            closed = true;
+                            break;
+                        }
+                        sb.Append(c);
+                        i++;
+                    }
+                    if (closed)
+                        modelText = sb.ToString().Trim();
+                }
+            }
+        }
+
+        // 2) Fallback: if we didn't find a modelText via "text": ..., try to extract the first { ... } block from the full response
+        if (string.IsNullOrEmpty(modelText))
+        {
+            int s = apiResponseJson.IndexOf('{');
+            int e = apiResponseJson.LastIndexOf('}');
+            if (s >= 0 && e > s)
+            {
+                modelText = apiResponseJson.Substring(s, e - s + 1);
+                Log("Fallback extracted JSON from raw response.");
+            }
+            else
+            {
+                Log("No model text and no JSON block found in response.");
+                if (uiText != null) uiText.text = "Malformed Gemini response.";
+                return;
+            }
+        }
+        else
+        {
+            Log("Extracted model text from wrapper:\n" + modelText);
+        }
+
+        // 3) Remove Markdown fences like ```json and ```
+        string cleaned = modelText.Replace("```json", "")
+                                  .Replace("```", "")
+                                  .Trim();
+
+        // 4) Find the JSON object within the cleaned text
+        int start = cleaned.IndexOf('{');
+        int end = cleaned.LastIndexOf('}');
+        if (start < 0 || end <= start)
+        {
+            Log("Could not find JSON object boundaries after cleaning. Cleaned text:\n" + cleaned);
+            if (uiText != null) uiText.text = "Could not parse model output.";
             return;
         }
 
-        string core = json.Substring(s, e - s + 1);
-        GeminiResponse result = null;
+        string innerJson = cleaned.Substring(start, end - start + 1);
+        Log("CLEAN JSON TO PARSE:\n" + innerJson);
 
+        // 5) Parse into your response type. (Make sure your class has fields action & discardReturn)
+        GeminiResponse parsed = null;
         try
         {
-            result = JsonUtility.FromJson<GeminiResponse>(core);
+            parsed = JsonUtility.FromJson<GeminiResponse>(innerJson);
         }
-        catch
+        catch (Exception ex)
         {
-            uiText.text = "Could not parse JSON";
+            Log("JsonUtility.FromJson failed: " + ex.Message);
+        }
+
+        if (parsed == null)
+        {
+            Log("Parsed object is null. JSON was:\n" + innerJson);
+            if (uiText != null) uiText.text = "Invalid model response.";
             return;
         }
 
-        uiText.text = $"Action: {result.action} Return Card: { result.discardReturn}";
+        if (string.IsNullOrEmpty(parsed.action))
+        {
+            Log("Parsed response missing 'action'. JSON:\n" + innerJson);
+            if (uiText != null) uiText.text = "Invalid model response (no action).";
+            return;
+        }
+
+        // 6) Display concise result and log full details
+        string uiOut = $"Action: {parsed.action}\nReturn Card: {parsed.discardReturn}";
+        if (uiText != null) uiText.text = uiOut;
+        Log("Parsed game response: " + uiOut);
     }
 
+
+
+
     // -------------------- JSON ESCAPER --------------------
-    
+
 
     private string EscapeJson(string s)
     {
