@@ -22,7 +22,6 @@ public class HandManager : MonoBehaviour
     private List<int> selectedCards = new List<int>();
     private List<Card> playedCards = new List<Card>();
     private Dictionary<Card, int> jokerValues = new Dictionary<Card, int>();
-
     private int currentJokerIndex = -1;
 
     // ---- Rules & Scoring ----
@@ -31,12 +30,12 @@ public class HandManager : MonoBehaviour
     public int ruleStartHand = 5;           //rule 1
     public int ruleDraw = 0;                //rule 2
     public int ruleMaxHand = 0;             //rule 3
-    public bool rulePointsEnabled = false;   //rule 4
-    public bool rulePointsEnd = false;       //rule 5
+    public bool rulePointsEnabled = false;  //rule 4
+    public bool rulePointsEnd = false;      //rule 5
     public bool rulePointsWin = false;      //rule 6
     public bool ruleReshuffle = false;      //rule 7
-    public bool ruleJoker = false;           //rule 8
-    public bool rulesCard = false;           //rule 9
+    public bool ruleJoker = false;          //rule 8
+    public bool rulesCard = false;          //rule 9
     public List<Rule> rules;
 
     void Start()
@@ -66,7 +65,7 @@ public class HandManager : MonoBehaviour
                 RequiresNames = new List<string> { "Points enabled" },
                 OnEnable = () => {
                     rulePointsEnd = true;
-                    pointEndLimit = UnityEngine.Random.Range(50, 300);
+                    pointEndLimit = UnityEngine.Random.Range(50, 300); // set point end to random 50-300
                     Debug.Log($"Points to reach set to {pointEndLimit}");
                 }
             },
@@ -76,7 +75,7 @@ public class HandManager : MonoBehaviour
                 Enabled = ruleMaxHand > 0,
                 OnEnable = () =>
                 {
-                    ruleMaxHand = UnityEngine.Random.Range(1, 8); // set max to random 1–12
+                    ruleMaxHand = UnityEngine.Random.Range(1, 8); // set max to random 1–8
                     Debug.Log($"Max hand size set to {ruleMaxHand}");
                 }
             },
@@ -162,6 +161,7 @@ public class HandManager : MonoBehaviour
         PlaySelectedCards();
     }
 
+    // ---- End button pressed ----
     void OnEndTurnButtonPressed()
     {
         if (selectedCards.Count == 0)
@@ -184,6 +184,7 @@ public class HandManager : MonoBehaviour
         PlaySelectedCards();
     }
 
+    // ---- Playing cards ----
     void PlaySelectedCards()
     {
         playedCards.Clear();
@@ -205,6 +206,7 @@ public class HandManager : MonoBehaviour
         FinishTurn();
     }
 
+    // ---- Ending turn ----
     void FinishTurn()
     {
         // ---- Handle Rules Cards ----
@@ -262,6 +264,7 @@ public class HandManager : MonoBehaviour
         UpdateHandUI();
     }
 
+    // ---- Displaying top of discard ----
     void UpdateDiscardTopCard()
     {
         if (discardTopCardText == null) return;
@@ -277,6 +280,7 @@ public class HandManager : MonoBehaviour
         }
     }
 
+    // ---- Ending the game ----
     void EndGame()
     {
         Debug.Log($"Game Over!");
@@ -288,6 +292,7 @@ public class HandManager : MonoBehaviour
         }
     }
 
+    // ---- Drawing cards ----
     void DrawCards(int count)
     {
         for (int i = 0; i < count; i++)
@@ -313,6 +318,7 @@ public class HandManager : MonoBehaviour
         Debug.Log($"There are {deck.Count} cards left in the deck");
     }
 
+    // ---- Getting value ----
     int GetCardValue(Card c)
     {
         switch (c.Rank)
