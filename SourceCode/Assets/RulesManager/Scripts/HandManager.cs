@@ -27,16 +27,16 @@ public class HandManager : MonoBehaviour
     // ---- Rules & Scoring ----
     private int totalPoints = 0;
     public int pointEndLimit = 0;
-    public int ruleStartHand = 5;           //rule 1
-    public int ruleDraw = 0;                //rule 2
-    public int ruleMaxHand = 0;             //rule 3
-    public bool rulePointsEnabled = false;  //rule 4
-    public bool rulePointsEnd = false;      //rule 5
-    public bool rulePointsWin = false;      //rule 6
-    public bool ruleReshuffle = false;      //rule 7
-    public bool ruleJoker = false;          //rule 8
-    public bool rulesCard = false;          //rule 9
-    public List<Rule> rules;
+    public int ruleStartHand = 5;           //Rule 1
+    public int ruleDraw = 0;                //Rule 2
+    public int ruleMaxHand = 0;             //Rule 3
+    public bool rulePointsEnabled = false;  //Rule 4
+    public bool rulePointsEnd = false;      //Rule 5
+    public bool rulePointsWin = false;      //Rule 6
+    public bool ruleReshuffle = false;      //Rule 7
+    public bool ruleJoker = false;          //Rule 8
+    public bool rulesCard = false;          //Rule 9
+    public List<Rule> rules;                //List of Rules
 
     void Start()
     {
@@ -150,14 +150,10 @@ public class HandManager : MonoBehaviour
     public void OnJokerValueSelected(int value)
     {
         if (currentJokerIndex == -1) return;
-
         Card jokerCard = playerHand[currentJokerIndex];
         jokerValues[jokerCard] = value;
-
         currentJokerIndex = -1;
         jokerPanel.SetActive(false);
-
-        // Now play all selected cards
         PlaySelectedCards();
     }
 
@@ -221,9 +217,7 @@ public class HandManager : MonoBehaviour
                 if (eligibleRules.Count > 0)
                 {
                     Rule chosen = eligibleRules[UnityEngine.Random.Range(0, eligibleRules.Count)];
-                    chosen.Enabled = true;
-                    chosen.OnEnable?.Invoke();
-                    Debug.Log($"Rule enabled: {chosen.Name}");
+                    chosen.Enable();
                 }
                 else
                     Debug.Log("All rules already enabled!");
@@ -454,12 +448,6 @@ public class HandManager : MonoBehaviour
                 OnDisable?.Invoke();
                 Debug.Log($"Rule disabled: {Name}");
             }
-        }
-
-        public void Toggle()
-        {
-            if (Enabled) Disable();
-            else Enable();
         }
     }
 }
