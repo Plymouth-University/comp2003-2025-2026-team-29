@@ -38,6 +38,9 @@ public class HandManager : MonoBehaviour
     public bool rulesCard = false;          //Rule 9
     public List<Rule> rules;                //List of Rules
 
+    // ---- AI ----
+    public UnityGeminiCardAI geminiAI;
+
     void Start()
     {
         rules = new List<Rule> {
@@ -176,7 +179,6 @@ public class HandManager : MonoBehaviour
             jokerPanel.SetActive(true);
             return; // Wait for Joker value
         }
-
         PlaySelectedCards();
     }
 
@@ -256,6 +258,24 @@ public class HandManager : MonoBehaviour
         DrawCards(ruleDraw);
 
         UpdateHandUI();
+
+        StartCoroutine(AITurn());
+    }
+
+    System.Collections.IEnumerator AITurn()
+    {
+        geminiAI.CallGemini();
+        yield return new WaitUntil(() => geminiAI.latestResponse != null);
+        Debug.Log(geminiAI.latestResponse);
+        if (geminiAI.latestResponse != null)
+        {
+            string AICard = geminiAI.latestResponse.discardReturn;
+            string[] AIHand = geminiAI.latestResponse.updatedHand.ToArray();
+            Debug.Log("AI response");
+            Debug.Log("Action = " + AICard);
+            Debug.Log("Hand = " + string.Join(", ", AIHand));
+        }
+        geminiAI.ResetLatestResponse();
     }
 
     // ---- Displaying top of discard ----
