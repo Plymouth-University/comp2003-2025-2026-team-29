@@ -25,9 +25,11 @@ public class HandManager : MonoBehaviour
     private Dictionary<Card, int> jokerValues = new Dictionary<Card, int>();
     private int currentJokerIndex = -1;
     public int turn = 0;
+    public bool isAITurn = false;
 
     // ---- Rules & Scoring ----
     private int totalPoints = 0;
+    private int totalAIPoints = 0;
     public int pointEndLimit = 0;
     public int ruleStartHand = 5;           //Rule 1
     public int ruleDraw = 0;                //Rule 2
@@ -228,6 +230,29 @@ public class HandManager : MonoBehaviour
         FinishTurn();
     }
 
+    void PlayAICards(string AIIndices)
+    {
+        if (string.IsNullOrEmpty(AIIndices)) return;
+        string[] Parts = AIIndices.Split('/');
+        List<int> AISelectedCards = Parts.Select(s => int.Parse(s)).ToList();
+        playedCards.Clear();
+        AISelectedCards.Sort();
+        AISelectedCards.Reverse();
+        List<Card> AIPlayedCards = new List<Card>();
+        foreach (int idx in AISelectedCards)
+        {
+            if (idx >= 0 && idx < AIHand.Count)
+            {
+                Card c = AIHand[idx];
+                playedCards.Add(c);
+                AIHand.RemoveAt(idx);
+            }
+        }
+        foreach (var c in playedCards) deck.AddToDiscard(c);
+        isAITurn = true;
+        FinishTurn();
+    }
+
     // ---- Ending turn ----
     void FinishTurn()
     {
@@ -259,7 +284,7 @@ public class HandManager : MonoBehaviour
                 int val = 0;
                 if (c.Rank == Rank.Joker || c.Rank == Rank.Joker2)
                 {
-                    val = jokerValues.ContainsKey(c) ? jokerValues[c] : 25;
+                    val = jokerValues.ContainsKey(c) ? jokerValues[c] : 11;
                 }
                 else if (c.Rank == Rank.Rules) val = 0;
                 else
@@ -268,16 +293,25 @@ public class HandManager : MonoBehaviour
                 }
                 turnPoints += val;
             }
-            totalPoints += turnPoints;
-            Debug.Log($"Turn points: {turnPoints}, Total points: {totalPoints}");
+            if (isAITurn)
+            {
+                totalAIPoints += turnPoints;
+                Debug.Log($"Turn points: {turnPoints}, AI Total points: {totalAIPoints}");
+            }
+            else
+            {
+                totalPoints += turnPoints;
+                Debug.Log($"Turn points: {turnPoints}, Total points: {totalPoints}");
+            }
             UpdateDiscardTopCard();
 
-            if (rulePointsEnd && totalPoints >= pointEndLimit)
+            if (rulePointsEnd && (totalPoints >= pointEndLimit || totalAIPoints >= pointEndLimit))
             {
                 EndGame();
             }
         }
-        StartCoroutine(AITurn());
+        if (!isAITurn) StartCoroutine(AITurn());
+        isAITurn = false;
     }
 
     System.Collections.IEnumerator AITurn()
@@ -292,8 +326,8 @@ public class HandManager : MonoBehaviour
                           "Using the rules listed in 'rules', and the cards in your hand, denoted by" +
                           "'playerHand' and the card shown on the discard pile, denoted as 'discardTop'," +
                           "you need to take your go and return the details." +
-                          "For discarded card, give only the number for location of the card for your response." +
-                          "You can play any number of cards, seperate each card played with a /.",
+                          "For discarded card, give ONLY the number for location of the card for your response." +
+                          "You can play any number of cards at once, seperate each card played with a /.",
             rules = new GeminiRules
             {
                 rules = GetActiveRulesForAI() // <-- only active rules
@@ -309,11 +343,12 @@ public class HandManager : MonoBehaviour
         Debug.Log(geminiAI.latestResponse);
         if (geminiAI.latestResponse != null)
         {
-            string AICard = geminiAI.latestResponse.discardReturn;
+            string AICards = geminiAI.latestResponse.discardReturn;
             string[] AIHand = geminiAI.latestResponse.updatedHand.ToArray();
             Debug.Log("AI response");
-            Debug.Log("Action = " + AICard);
+            Debug.Log("Action = " + AICards);
             Debug.Log("Hand = " + string.Join(", ", AIHand));
+            PlayAICards(AICards);
         }
         geminiAI.ResetLatestResponse();
         turn += 1;
@@ -342,6 +377,12 @@ public class HandManager : MonoBehaviour
     void EndGame()
     {
         Debug.Log($"Game Over!");
+        if (rulePointsWin)
+        {
+            if (totalPoints > totalAIPoints) Debug.Log($"Player Wins!");
+            else if (totalAIPoints > totalPoints) Debug.Log($"AI Wins!");
+            else Debug.Log($"It was a tie!");
+        }
         endTurnButton.interactable = false;
         foreach (Transform child in cardParent)
         {
@@ -421,7 +462,7 @@ public class HandManager : MonoBehaviour
             case Rank.Ace: return 11;
             case Rank.Joker:
             case Rank.Joker2:
-            case Rank.Rules: return 25;
+            case Rank.Rules:
             default: return 0;
         }
     }
