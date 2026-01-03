@@ -24,6 +24,7 @@ public class HandManager : MonoBehaviour
     private List<Card> playedCards = new List<Card>();
     private Dictionary<Card, int> jokerValues = new Dictionary<Card, int>();
     private int currentJokerIndex = -1;
+    public int turn = 0;
 
     // ---- Rules & Scoring ----
     private int totalPoints = 0;
@@ -276,18 +277,33 @@ public class HandManager : MonoBehaviour
                 EndGame();
             }
         }
-
-        // Draw new cards using the fixed method
-        DrawCards(ruleDraw);
-
-        UpdateHandUI();
-
         StartCoroutine(AITurn());
     }
 
     System.Collections.IEnumerator AITurn()
     {
-        geminiAI.CallGemini();
+        if (turn != 0) DrawAICards(ruleDraw);
+        UpdateHandUI();
+        GeminiRequest req = new GeminiRequest
+        {
+            gameId = "GAME-001",
+            instruction = "You are a player in a card game." +
+                          "The gameId is an identifier for the game." +
+                          "Using the rules listed in 'rules', and the cards in your hand, denoted by" +
+                          "'playerHand' and the card shown on the discard pile, denoted as 'discardTop'," +
+                          "you need to take your go and return the details." +
+                          "For discarded card, give only the number for location of the card for your response." +
+                          "You can play any number of cards, seperate each card played with a /.",
+            rules = new GeminiRules
+            {
+                rules = GetActiveRulesForAI() // <-- only active rules
+            },
+            playerHand = AIHand.Select(c => c.ToString()).ToList(),
+            discardTop = deck.DiscardCount > 0 ? deck.PeekDiscard().ToString() : "",
+            stack = new List<string>()
+        };
+        geminiAI.SendToGemini(req);
+        Debug.Log("Button clicked — sending request to Gemini...");
         endTurnButton.interactable = false;
         yield return new WaitUntil(() => geminiAI.latestResponse != null);
         Debug.Log(geminiAI.latestResponse);
@@ -300,7 +316,9 @@ public class HandManager : MonoBehaviour
             Debug.Log("Hand = " + string.Join(", ", AIHand));
         }
         geminiAI.ResetLatestResponse();
-        DrawAICards(ruleDraw);
+        turn += 1;
+        if (turn != 0) DrawCards(ruleDraw);
+        UpdateHandUI();
         endTurnButton.interactable = true;
     }
 
@@ -406,6 +424,40 @@ public class HandManager : MonoBehaviour
             case Rank.Rules: return 25;
             default: return 0;
         }
+    }
+
+    public List<string> GetActiveRulesForAI()
+    {
+        List<string> aiRules = new List<string>();
+
+        if (ruleStartHand != 5) // assume default 5 means inactive
+            aiRules.Add($"Starting hand size is {ruleStartHand} cards.");
+
+        if (ruleDraw > 0)
+            aiRules.Add($"Draw {ruleDraw} card(s) each turn.");
+
+        if (ruleMaxHand > 0)
+            aiRules.Add($"Maximum hand size is {ruleMaxHand} card(s).");
+
+        if (rulePointsEnabled)
+            aiRules.Add("You gain points equal to value of cards.");
+
+        if (rulePointsEnd)
+            aiRules.Add($"The game ends when a player reaches {pointEndLimit} points.");
+
+        if (rulePointsWin)
+            aiRules.Add("The player with the most points wins.");
+
+        if (ruleReshuffle)
+            aiRules.Add("The deck reshuffles automatically when empty.");
+
+        if (ruleJoker)
+            aiRules.Add("Jokers are enabled and can be played with custom values (A-K).");
+
+        if (rulesCard)
+            aiRules.Add("Special Rules cards are enabled in the game. Rules cards add a rule to the game when played and are worth 0 points (if points are on).");
+
+        return aiRules;
     }
 
     // ---- Classes ----
