@@ -19,6 +19,7 @@ public class HandManager : MonoBehaviour
     // ---- Game Logic ----
     public Deck deck;
     public List<Card> playerHand = new List<Card>();
+    public List<Card> AIHand = new List<Card>();
     private List<int> selectedCards = new List<int>();
     private List<Card> playedCards = new List<Card>();
     private Dictionary<Card, int> jokerValues = new Dictionary<Card, int>();
@@ -93,6 +94,7 @@ public class HandManager : MonoBehaviour
 
         // Draw starting hand
         DrawCards(ruleStartHand);
+        DrawAICards(ruleStartHand);
 
         UpdateHandUI();
 
@@ -111,6 +113,8 @@ public class HandManager : MonoBehaviour
 
         float spacing = 130f;
         float startX = -((playerHand.Count - 1) * spacing) / 2;
+        float AIspacing = 130f;
+        float AIstartX = -((AIHand.Count - 1) * spacing) / 2;
 
         for (int i = 0; i < playerHand.Count; i++)
         {
@@ -128,6 +132,25 @@ public class HandManager : MonoBehaviour
 
             int index = i;
             cardButton.GetComponent<Button>().onClick.AddListener(() => OnCardClicked(index));
+        }
+        for (int i = 0; i < AIHand.Count; i++)
+        {
+
+            GameObject AICardButton = Instantiate(cardPrefab, cardParent);
+
+            TMP_Text tmpText = AICardButton.GetComponentInChildren<TMP_Text>();
+            if (tmpText != null) tmpText.text = "";
+
+            UnityEngine.UI.Text uiText = AICardButton.GetComponentInChildren<UnityEngine.UI.Text>();
+            if (uiText != null) uiText.text = "";
+
+            RectTransform rt = AICardButton.GetComponent<RectTransform>();
+            rt.anchoredPosition = new Vector2(AIstartX + i * AIspacing, 800);
+            rt.sizeDelta = new Vector2(120, 180);
+            Button btn = AICardButton.GetComponent<Button>();
+            btn.interactable = false;
+
+            int AIindex = i;
         }
     }
 
@@ -265,6 +288,7 @@ public class HandManager : MonoBehaviour
     System.Collections.IEnumerator AITurn()
     {
         geminiAI.CallGemini();
+        endTurnButton.interactable = false;
         yield return new WaitUntil(() => geminiAI.latestResponse != null);
         Debug.Log(geminiAI.latestResponse);
         if (geminiAI.latestResponse != null)
@@ -276,6 +300,8 @@ public class HandManager : MonoBehaviour
             Debug.Log("Hand = " + string.Join(", ", AIHand));
         }
         geminiAI.ResetLatestResponse();
+        DrawAICards(ruleDraw);
+        endTurnButton.interactable = true;
     }
 
     // ---- Displaying top of discard ----
@@ -327,6 +353,31 @@ public class HandManager : MonoBehaviour
             {
                 Card c = deck.Draw();
                 if (c != null) playerHand.Add(c);
+            }
+        }
+        Debug.Log($"There are {deck.Count} cards left in the deck");
+    }
+
+    void DrawAICards(int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            if (deck.Count == 0)
+            {
+                if (ruleReshuffle && deck.DiscardCount > 0)
+                {
+                    deck.Reshuffle();
+                }
+                else
+                {
+                    // Can't draw more cards
+                    break;
+                }
+            }
+            if (AIHand.Count < ruleMaxHand || ruleMaxHand == 0)
+            {
+                Card c = deck.Draw();
+                if (c != null) AIHand.Add(c);
             }
         }
         Debug.Log($"There are {deck.Count} cards left in the deck");
