@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -13,8 +14,17 @@ public class HandManager : MonoBehaviour
     public GameObject cardPrefab;
     public Transform cardParent;
     public Button endTurnButton;
-    public GameObject jokerPanel; // Assign your JokerPanel here
-    public TMP_Text discardTopCardText;
+    public GameObject jokerPanel;
+    public Image discardTopCardImage;
+    public Texture2D[] cardTextures;
+    public Dictionary<string, Texture2D> cardTextureDict = new Dictionary<string, Texture2D>();
+    [Header("Card Art")]
+    public Texture2D cardBackTexture;
+    public GameObject cardVisualPrefab; 
+    public Transform playAreaParent;
+    public Animator deckShuffler;
+    public Animator cardShuffler;
+
 
     // ---- Game Logic ----
     public Deck deck;
@@ -24,8 +34,8 @@ public class HandManager : MonoBehaviour
     private List<Card> playedCards = new List<Card>();
     private Dictionary<Card, int> jokerValues = new Dictionary<Card, int>();
     private int currentJokerIndex = -1;
-    public int turn = 0;
-    public bool isAITurn = false;
+    private int turn = 0;
+    private bool isAITurn = false;
 
     // ---- Rules & Scoring ----
     private int totalPoints = 0;
@@ -95,6 +105,8 @@ public class HandManager : MonoBehaviour
         if (rulesCard) deck.AddRules();
         deck.Shuffle();
 
+        LoadCardTextures();
+
         // Draw starting hand
         DrawCards(ruleStartHand);
         DrawAICards(ruleStartHand);
@@ -114,23 +126,30 @@ public class HandManager : MonoBehaviour
         foreach (Transform child in cardParent)
             Destroy(child.gameObject);
 
-        float spacing = 130f;
+        float spacing = 550f / (playerHand.Count - 1);
         float startX = -((playerHand.Count - 1) * spacing) / 2;
-        float AIspacing = 130f;
-        float AIstartX = -((AIHand.Count - 1) * spacing) / 2;
+        float AIspacing = 550f / (AIHand.Count - 1);
+        float AIstartX = -((AIHand.Count - 1) * AIspacing) / 2;
 
         for (int i = 0; i < playerHand.Count; i++)
         {
             GameObject cardButton = Instantiate(cardPrefab, cardParent);
 
+            string cardKey = GetCardKey(playerHand[i]);
+            Debug.Log($"{cardKey}");
+
+            if (cardTextureDict.TryGetValue(cardKey, out Texture2D tex))
+            {
+                // --- Step 3: convert the texture to a Sprite and apply to the button ---
+                Sprite s = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+                cardButton.GetComponent<Image>().sprite = s; // assign sprite to button
+            }
+
             TMP_Text tmpText = cardButton.GetComponentInChildren<TMP_Text>();
             if (tmpText != null) tmpText.text = playerHand[i].ToString();
 
-            UnityEngine.UI.Text uiText = cardButton.GetComponentInChildren<UnityEngine.UI.Text>();
-            if (uiText != null) uiText.text = playerHand[i].ToString();
-
             RectTransform rt = cardButton.GetComponent<RectTransform>();
-            rt.anchoredPosition = new Vector2(startX + i * spacing, 0);
+            rt.anchoredPosition = new Vector2(startX + i * spacing, 60);
             rt.sizeDelta = new Vector2(120, 180);
 
             int index = i;
@@ -141,15 +160,16 @@ public class HandManager : MonoBehaviour
 
             GameObject AICardButton = Instantiate(cardPrefab, cardParent);
 
-            TMP_Text tmpText = AICardButton.GetComponentInChildren<TMP_Text>();
-            if (tmpText != null) tmpText.text = "";
+            Image img = AICardButton.GetComponent<Image>();
+            Sprite backSprite = GetCardBackSprite();
 
-            UnityEngine.UI.Text uiText = AICardButton.GetComponentInChildren<UnityEngine.UI.Text>();
-            if (uiText != null) uiText.text = "";
+            if (img != null && backSprite != null)
+                img.sprite = backSprite;
 
             RectTransform rt = AICardButton.GetComponent<RectTransform>();
-            rt.anchoredPosition = new Vector2(AIstartX + i * AIspacing, 800);
+            rt.anchoredPosition = new Vector2(AIstartX + i * AIspacing, 1000);
             rt.sizeDelta = new Vector2(120, 180);
+
             Button btn = AICardButton.GetComponent<Button>();
             btn.interactable = false;
 
@@ -164,13 +184,13 @@ public class HandManager : MonoBehaviour
         if (selectedCards.Contains(index))
         {
             selectedCards.Remove(index);
-            rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, 0);
+            rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, 60);
             rt.localScale = Vector3.one;
         }
         else
         {
             selectedCards.Add(index);
-            rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, 20);
+            rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, 80);
             rt.localScale = Vector3.one * 1.1f;
         }
     }
@@ -211,41 +231,146 @@ public class HandManager : MonoBehaviour
     // ---- Playing cards ----
     void PlaySelectedCards()
     {
+        StartCoroutine(PlaySelectedCardsCoroutine());
+    }
+
+    private IEnumerator PlaySelectedCardsCoroutine()
+    {
         playedCards.Clear();
         selectedCards.Sort();
         selectedCards.Reverse();
 
         foreach (int idx in selectedCards)
         {
+            UpdateHandUI();
             Card c = playerHand[idx];
             playedCards.Add(c);
             playerHand.RemoveAt(idx);
+
+            if (cardVisualPrefab != null && playAreaParent != null)
+            {
+                GameObject visualCard = Instantiate(
+                    cardVisualPrefab,
+                    playAreaParent.position,
+                    Quaternion.identity,
+                    playAreaParent
+                );
+
+                if (cardTextureDict.TryGetValue(GetCardKey(c), out Texture2D tex))
+                {
+                    Transform cardFront = visualCard.transform.Find("CardFront");
+                    if (cardFront != null)
+                    {
+                        MeshRenderer mr = cardFront.GetComponent<MeshRenderer>();
+                        if (mr != null)
+                        {
+                            mr.material = new Material(mr.material); // clone so it doesn't overwrite shared material
+                            mr.material.mainTexture = tex;
+                        }
+                        else
+                        {
+                            Debug.LogError("MeshRenderer not found on CardFront!");
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogError("CardFront child not found on visualCard prefab!");
+                    }
+                }
+
+                visualCard.transform.localScale = Vector3.one * 0.2f;
+                visualCard.transform.rotation = Quaternion.Euler(90, 0, 0);
+                Animator anim = visualCard.GetComponent<Animator>();
+                if (anim != null)
+                {
+                    anim.SetTrigger("playerPlay");
+                }
+                // Wait for a short time before spawning the next card
+                yield return new WaitForSeconds(0.2f);
+                Destroy(visualCard, 1.0f); // destroy after animation finishes
+            }
         }
-
         selectedCards.Clear();
-
         foreach (var c in playedCards)
             deck.AddToDiscard(c);
+
+        UpdateDiscardTopCard();
 
         FinishTurn();
     }
 
     void PlayAICards(string AIIndices)
     {
-        if (string.IsNullOrEmpty(AIIndices)) return;
+        StartCoroutine(PlayAICardsoroutine(AIIndices));
+    }
+
+    private IEnumerator PlayAICardsoroutine(string AIIndices)
+    {
+        Debug.Log("Coroutine started");
+        if (string.IsNullOrEmpty(AIIndices))
+        {
+            Debug.Log("AIIndices empty, exiting");
+            yield break;
+        }
+
         string[] Parts = AIIndices.Split('/');
         List<int> AISelectedCards = Parts.Select(s => int.Parse(s)).ToList();
         playedCards.Clear();
         AISelectedCards.Sort();
         AISelectedCards.Reverse();
-        List<Card> AIPlayedCards = new List<Card>();
+
         foreach (int idx in AISelectedCards)
         {
+            Debug.Log("Processing card index: " + idx);
+
             if (idx >= 0 && idx < AIHand.Count)
             {
+                UpdateHandUI();
                 Card c = AIHand[idx];
                 playedCards.Add(c);
                 AIHand.RemoveAt(idx);
+                if (cardVisualPrefab != null && playAreaParent != null)
+                {
+                    GameObject visualCard = Instantiate(
+                        cardVisualPrefab,
+                        playAreaParent.position,
+                        Quaternion.identity,
+                        playAreaParent
+                    );
+
+                    if (cardTextureDict.TryGetValue(GetCardKey(c), out Texture2D tex))
+                    {
+                        Transform cardFront = visualCard.transform.Find("CardFront");
+                        if (cardFront != null)
+                        {
+                            MeshRenderer mr = cardFront.GetComponent<MeshRenderer>();
+                            if (mr != null)
+                            {
+                                mr.material = new Material(mr.material); // clone so it doesn't overwrite shared material
+                                mr.material.mainTexture = tex;
+                            }
+                            else
+                            {
+                                Debug.LogError("MeshRenderer not found on CardFront!");
+                            }
+                        }
+                        else
+                        {
+                            Debug.LogError("CardFront child not found on visualCard prefab!");
+                        }
+                    }
+
+                    visualCard.transform.localScale = Vector3.one * 0.2f;
+                    visualCard.transform.rotation = Quaternion.Euler(90, 0, 0);
+                    Animator anim = visualCard.GetComponent<Animator>();
+                    if (anim != null)
+                    {
+                        anim.SetTrigger("enemyPlay");
+                    }
+                    // Wait for a short time before spawning the next card
+                    yield return new WaitForSeconds(0.5f);
+                    Destroy(visualCard, 2.2f);
+                }
             }
         }
         foreach (var c in playedCards) deck.AddToDiscard(c);
@@ -354,24 +479,42 @@ public class HandManager : MonoBehaviour
         turn += 1;
         if (turn != 0) DrawCards(ruleDraw);
         UpdateHandUI();
+        selectedCards.Clear();
         endTurnButton.interactable = true;
     }
 
     // ---- Displaying top of discard ----
     void UpdateDiscardTopCard()
     {
-        if (discardTopCardText == null) return;
+        if (discardTopCardImage == null) return;
 
-        if (deck.DiscardCount > 0)
+        if (deck.DiscardCount == 0)
         {
-            Card topCard = deck.PeekDiscard();
-            discardTopCardText.text = topCard.ToString();
+            discardTopCardImage.sprite = null;
+            return;
+        }
+
+        Card topCard = deck.PeekDiscard();
+        string cardKey = GetCardKey(topCard);
+
+        Debug.Log($"Discard card key: {cardKey}");
+
+        if (cardTextureDict.TryGetValue(cardKey, out Texture2D tex))
+        {
+            Sprite s = Sprite.Create(
+                tex,
+                new Rect(0, 0, tex.width, tex.height),
+                new Vector2(0.5f, 0.5f)
+            );
+
+            discardTopCardImage.sprite = s;
         }
         else
         {
-            discardTopCardText.text = "Discard pile empty";
+            Debug.LogWarning($"Discard texture not found for key: {cardKey}");
         }
     }
+
 
     // ---- Ending the game ----
     void EndGame()
@@ -394,30 +537,10 @@ public class HandManager : MonoBehaviour
     // ---- Drawing cards ----
     void DrawCards(int count)
     {
-        for (int i = 0; i < count; i++)
-        {
-            if (deck.Count == 0)
-            {
-                if (ruleReshuffle && deck.DiscardCount > 0)
-                {
-                    deck.Reshuffle();
-                }
-                else
-                {
-                    // Can't draw more cards
-                    break;
-                }
-            }
-            if (playerHand.Count < ruleMaxHand || ruleMaxHand == 0)
-            {
-                Card c = deck.Draw();
-                if (c != null) playerHand.Add(c);
-            }
-        }
-        Debug.Log($"There are {deck.Count} cards left in the deck");
+        StartCoroutine(DrawCardsCoroutine(count));
     }
 
-    void DrawAICards(int count)
+    private IEnumerator DrawCardsCoroutine(int count)
     {
         for (int i = 0; i < count; i++)
         {
@@ -425,7 +548,89 @@ public class HandManager : MonoBehaviour
             {
                 if (ruleReshuffle && deck.DiscardCount > 0)
                 {
-                    deck.Reshuffle();
+                    Reshuffle();
+                }
+                else
+                {
+                    // Can't draw more cards
+                    break;
+                }
+            }
+
+            if (playerHand.Count < ruleMaxHand || ruleMaxHand == 0)
+            {
+                Card c = deck.Draw();
+                if (c != null)
+                {
+                    playerHand.Add(c);
+
+                    // ---- Spawn visual card ----
+                    if (cardVisualPrefab != null && playAreaParent != null)
+                    {
+                        GameObject visualCard = Instantiate(
+                            cardVisualPrefab,
+                            playAreaParent.position, // spawn at deck position
+                            Quaternion.identity,
+                            playAreaParent
+                        );
+                        // Assign the correct texture
+                        if (cardTextureDict.TryGetValue(GetCardKey(c), out Texture2D tex))
+                        {
+                            Transform cardFront = visualCard.transform.Find("CardFront");
+                            if (cardFront != null)
+                            {
+                                MeshRenderer mr = cardFront.GetComponent<MeshRenderer>();
+                                if (mr != null)
+                                {
+                                    mr.material = new Material(mr.material); // clone so it doesn't overwrite shared material
+                                    mr.material.mainTexture = tex;
+                                }
+                                else
+                                {
+                                    Debug.LogError("MeshRenderer not found on CardFront!");
+                                }
+                            }
+                            else
+                            {
+                                Debug.LogError("CardFront child not found on visualCard prefab!");
+                            }
+
+                        }
+
+                        visualCard.transform.localScale = Vector3.one * 0.2f;
+                        visualCard.transform.rotation = Quaternion.Euler(90, 0, 0);
+                        Animator anim = visualCard.GetComponent<Animator>();
+                        if (anim != null)
+                        {
+                            anim.SetTrigger("playerDraw");
+                        }
+                        Destroy(visualCard, 1.0f);
+                    }
+                    yield return new WaitForSeconds(0.2f);
+                }
+            }
+        }
+
+        Debug.Log($"There are {deck.Count} cards left in the deck");
+
+        // Update UI after all cards drawn
+        UpdateHandUI();
+    }
+
+    void DrawAICards(int count)
+    {
+        StartCoroutine(DrawAICardsCoroutine(count));
+    }
+
+    private IEnumerator DrawAICardsCoroutine(int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            if (deck.Count == 0)
+            {
+                if (ruleReshuffle && deck.DiscardCount > 0)
+                {
+                    Reshuffle();
                 }
                 else
                 {
@@ -436,10 +641,118 @@ public class HandManager : MonoBehaviour
             if (AIHand.Count < ruleMaxHand || ruleMaxHand == 0)
             {
                 Card c = deck.Draw();
-                if (c != null) AIHand.Add(c);
+                if (c != null)
+                {
+                    AIHand.Add(c);
+                    if (cardVisualPrefab != null && playAreaParent != null)
+                    {
+                        GameObject visualCard = Instantiate(
+                            cardVisualPrefab,
+                            playAreaParent.position, // spawn at deck position
+                            Quaternion.identity,
+                            playAreaParent
+                        );
+                        visualCard.transform.localScale = Vector3.one * 0.2f;
+                        visualCard.transform.rotation = Quaternion.Euler(90, 0, 0);
+                        Animator anim = visualCard.GetComponent<Animator>();
+                        if (anim != null)
+                        {
+                            anim.SetTrigger("enemyDraw");
+                        }
+                        Destroy(visualCard, 1.0f);
+                    }
+                    yield return new WaitForSeconds(0.2f);
+                }
             }
         }
         Debug.Log($"There are {deck.Count} cards left in the deck");
+        UpdateHandUI();
+    }
+
+    Sprite ConvertTextureToSprite(Texture2D texture)
+    {
+        return Sprite.Create(
+            texture,
+            new Rect(0, 0, texture.width, texture.height), // full texture
+            new Vector2(0.5f, 0.5f) // pivot in center
+        );
+    }
+
+    Sprite GetCardBackSprite()
+    {
+        if (cardBackTexture == null)
+        {
+            Debug.LogWarning("Card back texture not assigned!");
+            return null;
+        }
+
+        return Sprite.Create(
+            cardBackTexture,
+            new Rect(0, 0, cardBackTexture.width, cardBackTexture.height),
+            new Vector2(0.5f, 0.5f)
+        );
+    }
+
+
+    void LoadCardTextures()
+    {
+        cardTextureDict.Clear();
+        foreach (Texture2D tex in cardTextures)
+        {
+            if (tex == null) continue;
+            string key;
+            if (tex.name.StartsWith("Joker"))
+            {
+                // Keep Joker names as-is
+                key = tex.name; // e.g., "Joker cards-R"
+            }
+            else if (tex.name.StartsWith("Rules"))
+            {
+                // Keep Rules card name as-is
+                key = tex.name; // e.g., "Rules card"
+            }
+            else
+            {
+                // Normal cards
+                key = tex.name.Replace(" cards-", "-"); // "Spade cards-6" -> "Spade-6"
+            }
+            cardTextureDict[key] = tex;
+        }
+    }
+
+    string GetCardKey(Card c)
+    {
+        if (c.Rank == Rank.Joker) return "Joker cards-R";
+        if (c.Rank == Rank.Joker2) return "Joker cards-B";
+        if (c.Rank == Rank.Rules) return "Rules card";
+
+        string rankString;
+        switch (c.Rank)
+        {
+            case Rank.Jack: rankString = "J"; break;
+            case Rank.Queen: rankString = "Q"; break;
+            case Rank.King: rankString = "K"; break;
+            case Rank.Ace: rankString = "A"; break;
+            default: rankString = ((int)c.Rank).ToString(); break;
+        }
+
+        return $"{c.Suit}-{rankString}";
+    }
+
+    public void Reshuffle()
+    {
+        StartCoroutine(ReshuffleCoroutine());
+    }
+    private IEnumerator ReshuffleCoroutine()
+    {
+        if (deck.DiscardCount == 0) yield break;
+
+        if (deckShuffler != null) deckShuffler.SetTrigger("deckShuffle");
+        if (cardShuffler != null) cardShuffler.SetTrigger("cardShuffle");
+
+        yield return new WaitForSeconds(4.0f); // Wait for animation duration
+
+        deck.Reshuffle();
     }
 
     // ---- Getting value ----
@@ -502,7 +815,7 @@ public class HandManager : MonoBehaviour
     }
 
     // ---- Classes ----
-    public enum Suit { Hearts, Diamonds, Clubs, Spades, None }
+    public enum Suit { Hearts, Diamond, Clubs, Spade, None }
     public enum Rank { Two = 2, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Jack, Queen, King, Ace, Joker, Joker2, Rules }
 
     [Serializable]
@@ -575,7 +888,6 @@ public class HandManager : MonoBehaviour
 
         public void Reshuffle()
         {
-            if (discardPile.Count == 0) return;
             cards.AddRange(discardPile);
             discardPile.Clear();
             Shuffle();
