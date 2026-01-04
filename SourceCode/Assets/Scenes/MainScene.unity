@@ -3667,16 +3667,17 @@ MonoBehaviour:
   cardShuffler: {fileID: 3049792278648129318}
   playerHand: []
   AIHand: []
-  pointEndLimit: 300
-  ruleStartHand: 6
-  ruleDraw: 3
+  gameRules: {fileID: 11400000, guid: f680a6effc7335140b1426aa5d55d8e7, type: 2}
+  pointEndLimit: 0
+  ruleStartHand: 5
+  ruleDraw: 0
   ruleMaxHand: 0
-  rulePointsEnabled: 1
-  rulePointsEnd: 1
-  rulePointsWin: 1
+  rulePointsEnabled: 0
+  rulePointsEnd: 0
+  rulePointsWin: 0
   ruleReshuffle: 0
-  ruleJoker: 1
-  rulesCard: 1
+  ruleJoker: 0
+  rulesCard: 0
   rules: []
   geminiAI: {fileID: 1662743510}
 --- !u!4 &1722398834

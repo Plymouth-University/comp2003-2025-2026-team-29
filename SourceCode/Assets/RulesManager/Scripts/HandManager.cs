@@ -38,6 +38,7 @@ public class HandManager : MonoBehaviour
     private bool isAITurn = false;
 
     // ---- Rules & Scoring ----
+    public GameRulesSO gameRules;
     private int totalPoints = 0;
     private int totalAIPoints = 0;
     public int pointEndLimit = 0;
@@ -57,6 +58,17 @@ public class HandManager : MonoBehaviour
 
     void Start()
     {
+        // Use the values from the ScriptableObject
+        ruleJoker = gameRules.ruleJoker;
+        rulesCard = gameRules.rulesCard;
+        ruleReshuffle = gameRules.ruleReshuffle;
+        ruleStartHand = gameRules.ruleStartHand;
+        ruleDraw = gameRules.ruleDraw;
+        ruleMaxHand = gameRules.ruleMaxHand;
+        rulePointsEnabled = gameRules.rulePointsEnabled;
+        rulePointsEnd = gameRules.rulePointsEnd;
+        rulePointsWin = gameRules.rulePointsWin;
+        pointEndLimit = gameRules.pointEndLimit;
         rules = new List<Rule> {
             new Rule { Name = "Starting hand size", Enabled = ruleStartHand != 5, OnEnable = () =>
                 {
@@ -134,10 +146,7 @@ public class HandManager : MonoBehaviour
         for (int i = 0; i < playerHand.Count; i++)
         {
             GameObject cardButton = Instantiate(cardPrefab, cardParent);
-
             string cardKey = GetCardKey(playerHand[i]);
-            Debug.Log($"{cardKey}");
-
             if (cardTextureDict.TryGetValue(cardKey, out Texture2D tex))
             {
                 // --- Step 3: convert the texture to a Sprite and apply to the button ---
