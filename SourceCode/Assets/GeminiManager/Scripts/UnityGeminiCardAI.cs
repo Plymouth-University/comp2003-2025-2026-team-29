@@ -36,6 +36,8 @@ public class GeminiResponse
 public class UnityGeminiCardAI : MonoBehaviour
 {
 
+    public GeminiResponse latestResponse { get; private set; }
+
     // -------------------- API KEY FROM JSON FILE --------------------
     public TextAsset jsonApi; // Assign JSON_KEY_TEMPLATE.json here
 
@@ -47,7 +49,7 @@ public class UnityGeminiCardAI : MonoBehaviour
     void Awake()
     {
         if (jsonApi != null)
-            apiKey = JsonUtility.FromJson<ApiKeyWrapper>(jsonApi.text).key;
+            apiKey = JsonUtility.FromJson<ApiKeyWrapper>(jsonApi.text).key; 
         else
             Debug.LogError("API key JSON file missing. Assign jsonApi in Inspector.");
     }
@@ -243,6 +245,7 @@ public class UnityGeminiCardAI : MonoBehaviour
         try
         {
             parsed = JsonUtility.FromJson<GeminiResponse>(innerJson);
+            latestResponse = parsed; // store latest response for game code
         }
         catch (Exception ex)
         {
@@ -281,7 +284,10 @@ public class UnityGeminiCardAI : MonoBehaviour
         Log("Parsed game response: " + uiOut);
     }
 
-
+    public void ResetLatestResponse()
+    {
+        latestResponse = null;
+    }
 
 
     // -------------------- JSON ESCAPER --------------------
