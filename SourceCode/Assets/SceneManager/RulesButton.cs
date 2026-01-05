@@ -8,37 +8,78 @@ public class RulesButtonHandler : MonoBehaviour
     public TMP_InputField pointsInputField; // input field where user types the points
 
     // This will be called by a button
-    public void SetEndGameByPoints(int points)
+    public void SetEndGameByPoints(string points)
     {
+        int number;
         if (gameRules == null)
         {
             Debug.LogError("GameRules reference not set!");
             return;
         }
-        if (points > 0)
+        if (int.TryParse(points, out number))
         {
-            gameRules.rulePointsEnd = true;
-            gameRules.pointEndLimit = points;
-            Debug.Log($"End game by points enabled. Points to reach: {points}");
+            if (number > 0)
+            {
+                gameRules.rulePointsEnd = true;
+                gameRules.pointEndLimit = number;
+                Debug.Log($"End game by points enabled. Points to reach: {number}");
+            }
+        }
+        else
+        {
+            Debug.Log($"Input a number.");
         }
     }
 
-    public void SetStartingHand(int value)
+    public void SetStartingHand(string value)
     {
-        if (gameRules != null) gameRules.ruleStartHand = value;
-        Debug.Log("Starting hand set to: " + value);
+        int number;
+        if (int.TryParse(value, out number))
+        {
+            if (number > 0)
+            {
+                if (gameRules != null) gameRules.ruleStartHand = number;
+                Debug.Log("Starting hand set to: " + number);
+            }
+        }
+        else
+        {
+            Debug.Log($"Input a number.");
+        }
     }
 
-    public void SetDrawPerTurn(int value)
+    public void SetDrawPerTurn(string value)
     {
-        if (gameRules != null) gameRules.ruleDraw = value;
-        Debug.Log("Draw per turn set to: " + value);
+        int number;
+        if (int.TryParse(value, out number))
+        {
+            if (number > 0)
+            {
+                if (gameRules != null) gameRules.ruleDraw = number;
+                Debug.Log("Draw per turn set to: " + number);
+            }
+        }
+        else
+        {
+            Debug.Log($"Input a number.");
+        }
     }
 
-    public void SetMaxHand(int value)
+    public void SetMaxHand(string value)
     {
-        if (gameRules != null) gameRules.ruleMaxHand = value;
-        Debug.Log("Max hand set to: " + value);
+        int number;
+        if (int.TryParse(value, out number))
+        {
+            if (number > 0)
+            {
+                if (gameRules != null) gameRules.ruleMaxHand = number;
+                Debug.Log("Max hand set to: " + number);
+            }
+        }
+        else
+        {
+            Debug.Log($"Input a number.");
+        }
     }
 
     public void EnablePoints()
