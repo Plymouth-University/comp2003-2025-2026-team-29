@@ -454,14 +454,15 @@ public class HandManager : MonoBehaviour
         UpdateHandUI();
         GeminiRequest req = new GeminiRequest
         {
-            gameId = "GAME-001",
+            // gameId = "GAME-001",
+            gameId = "CARDSRULE-2026-02-06-13-14-00",
             instruction = "You are a player in a card game." +
                           "The gameId is an identifier for the game." +
                           "Using the rules listed in 'rules', and the cards in your hand, denoted by" +
                           "'playerHand' and the card shown on the discard pile, denoted as 'discardTop'," +
                           "you need to take your go and return the details." +
                           "For discarded card, give ONLY the number for location of the card for your response." +
-                          "You can play any number of cards at once, seperate each card played with a /.",
+                          "You can play any number of cards at once, separate each card played with a /.",
             rules = new GeminiRules
             {
                 rules = GetActiveRulesForAI() // <-- only active rules
@@ -470,8 +471,9 @@ public class HandManager : MonoBehaviour
             discardTop = deck.DiscardCount > 0 ? deck.PeekDiscard().ToString() : "",
             stack = new List<string>()
         };
-        geminiAI.SendToGemini(req);
         Debug.Log("Button clicked — sending request to Gemini...");
+        geminiAI.SendToGemini(req);
+        
         endTurnButton.interactable = false;
         yield return new WaitUntil(() => geminiAI.latestResponse != null);
         Debug.Log(geminiAI.latestResponse);

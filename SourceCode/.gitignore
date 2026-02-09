@@ -1,4 +1,5 @@
 JSON_KEY_TEMPLATE.json
+JSON_KEY_TEMPLATE.json.meta
 # This .gitignore file should be placed at the root of your Unity project directory
 #
 # Get latest from https://github.com/github/gitignore/blob/main/Unity.gitignore
@@ -68,7 +69,7 @@ sysinfo.txt
 mono_crash.*
 
 # Builds
-*.apk
+###*.apk
 *.aab
 *.unitypackage
 *.unitypackage.meta

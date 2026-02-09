@@ -2791,8 +2791,8 @@ Canvas:
   m_OverrideSorting: 0
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
-  m_VertexColorAlwaysGammaSpace: 0
-  m_AdditionalShaderChannelsFlag: 25
+  m_VertexColorAlwaysGammaSpace: 1
+  m_AdditionalShaderChannelsFlag: 1
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
   m_SortingOrder: 0
@@ -3381,7 +3381,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78417bd5ae2625248a4a516c72971fa8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityGeminiCardAI
-  jsonApi: {fileID: 4900000, guid: 7255abac000103f45912d7b96ccc4f5d, type: 3}
+  jsonApi: {fileID: 4900000, guid: e9f126215fb29a14a8f978da616c9153, type: 3}
   uiText: {fileID: 0}
   debugConsole: {fileID: 0}
 --- !u!4 &1662743511
