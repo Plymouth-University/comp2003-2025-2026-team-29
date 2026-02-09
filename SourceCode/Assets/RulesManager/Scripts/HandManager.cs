@@ -138,11 +138,31 @@ public class HandManager : MonoBehaviour
         foreach (Transform child in cardParent)
             Destroy(child.gameObject);
 
-        float spacing = 550f / (playerHand.Count - 1);
-        float startX = -((playerHand.Count - 1) * spacing) / 2;
-        float AIspacing = 550f / (AIHand.Count - 1);
-        float AIstartX = -((AIHand.Count - 1) * AIspacing) / 2;
+        float spacing = 0f;
+        float startX = 0;
+        float AIspacing = 0f;
+        float AIstartX = 0;
 
+        if (playerHand.Count > 1)
+        {
+            spacing = 550f / (playerHand.Count - 1);
+            startX = -((playerHand.Count - 1) * spacing) / 2;
+        }
+        else
+        {
+            spacing = 0f;
+            startX = 0;
+        }
+        if (AIHand.Count > 1)
+        {
+            AIspacing = 550f / (AIHand.Count - 1);
+            AIstartX = -((AIHand.Count - 1) * AIspacing) / 2;
+        }
+        else
+        {
+            AIspacing = 0f;
+            AIstartX = 0;
+        }
         for (int i = 0; i < playerHand.Count; i++)
         {
             GameObject cardButton = Instantiate(cardPrefab, cardParent);
@@ -251,7 +271,6 @@ public class HandManager : MonoBehaviour
 
         foreach (int idx in selectedCards)
         {
-            UpdateHandUI();
             Card c = playerHand[idx];
             playedCards.Add(c);
             playerHand.RemoveAt(idx);
@@ -298,12 +317,14 @@ public class HandManager : MonoBehaviour
                 yield return new WaitForSeconds(0.2f);
                 Destroy(visualCard, 1.0f); // destroy after animation finishes
             }
+            UpdateHandUI();
         }
         selectedCards.Clear();
         foreach (var c in playedCards)
             deck.AddToDiscard(c);
 
         UpdateDiscardTopCard();
+        UpdateHandUI();
 
         FinishTurn();
     }
@@ -334,7 +355,6 @@ public class HandManager : MonoBehaviour
 
             if (idx >= 0 && idx < AIHand.Count)
             {
-                UpdateHandUI();
                 Card c = AIHand[idx];
                 playedCards.Add(c);
                 AIHand.RemoveAt(idx);
@@ -380,9 +400,12 @@ public class HandManager : MonoBehaviour
                     yield return new WaitForSeconds(0.5f);
                     Destroy(visualCard, 2.2f);
                 }
+                UpdateHandUI();
             }
         }
         foreach (var c in playedCards) deck.AddToDiscard(c);
+        UpdateDiscardTopCard();
+        UpdateHandUI();
         isAITurn = true;
         FinishTurn();
     }
@@ -451,7 +474,6 @@ public class HandManager : MonoBehaviour
     System.Collections.IEnumerator AITurn()
     {
         if (turn != 0) DrawAICards(ruleDraw);
-        UpdateHandUI();
         GeminiRequest req = new GeminiRequest
         {
             gameId = "GAME-001",
@@ -461,7 +483,7 @@ public class HandManager : MonoBehaviour
                           "'playerHand' and the card shown on the discard pile, denoted as 'discardTop'," +
                           "you need to take your go and return the details." +
                           "For discarded card, give ONLY the number for location of the card for your response." +
-                          "You can play any number of cards at once, seperate each card played with a /.",
+                          "You can play 1 or more number of cards at once, seperate each card played with a /.",
             rules = new GeminiRules
             {
                 rules = GetActiveRulesForAI() // <-- only active rules
@@ -486,8 +508,8 @@ public class HandManager : MonoBehaviour
         }
         geminiAI.ResetLatestResponse();
         turn += 1;
-        if (turn != 0) DrawCards(ruleDraw);
         UpdateHandUI();
+        if (turn != 0) DrawCards(ruleDraw);
         selectedCards.Clear();
         endTurnButton.interactable = true;
     }

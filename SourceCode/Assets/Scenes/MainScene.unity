@@ -3381,7 +3381,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78417bd5ae2625248a4a516c72971fa8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityGeminiCardAI
-  jsonApi: {fileID: 4900000, guid: 7255abac000103f45912d7b96ccc4f5d, type: 3}
+  jsonApi: {fileID: 4900000, guid: b72e2ccef95a5534995fa047b23ce674, type: 3}
   uiText: {fileID: 0}
   debugConsole: {fileID: 0}
 --- !u!4 &1662743511
