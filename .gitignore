@@ -68,7 +68,7 @@ sysinfo.txt
 mono_crash.*
 
 # Builds
-*.apk
+#*.apk
 *.aab
 *.unitypackage
 *.unitypackage.meta
@@ -100,3 +100,8 @@ InitTestScene*.unity*
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
 
 /UnityLibrary
+
+/SourceCode/*BackUpThisFolder*
+*.symbols.zip
+
+
