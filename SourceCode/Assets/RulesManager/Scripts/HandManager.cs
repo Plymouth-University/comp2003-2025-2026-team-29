@@ -35,6 +35,10 @@ public class HandManager : MonoBehaviour
     private int currentJokerIndex = -1;
     private int turn = 0;
     private bool isAITurn = false;
+    private bool gameEnd = false;
+
+    // NEW: prevents starting AITurn twice when we prefetch the request
+    private bool aiRequestPrefetchedThisTurn = false;
 
     // NEW: prevents starting AITurn twice when we prefetch the request
     private bool aiRequestPrefetchedThisTurn = false;
@@ -126,8 +130,6 @@ public class HandManager : MonoBehaviour
         // Draw starting hand
         DrawCards(ruleStartHand);
         DrawAICards(ruleStartHand);
-
-        UpdateHandUI();
 
         if (endTurnButton != null)
             endTurnButton.onClick.AddListener(OnEndTurnButtonPressed);
@@ -274,6 +276,7 @@ public class HandManager : MonoBehaviour
         UpdateDiscardTopCard();
 
         // Resolve rules + scoring for the player's turn NOW (so the AI sees the correct state).
+<<<<<<< Updated upstream
         ResolveRulesAndScoringForPlayedCards();
 
         // Fire AI request immediately (while we show player animations).
@@ -287,6 +290,10 @@ public class HandManager : MonoBehaviour
             aiRequestPrefetchedThisTurn = true;
             geminiAI.SendToGemini(req);
         }
+=======
+
+        // Fire AI request immediately (while we show player animations).
+>>>>>>> Stashed changes
 
         // 2) Now do the player animations/UI.
         UpdateHandUI();
@@ -339,6 +346,7 @@ public class HandManager : MonoBehaviour
         }
 
         // 3) Wait for the AI response (it has been running in the background during animations).
+<<<<<<< Updated upstream
         if (geminiAI != null)
         {
             yield return new WaitUntil(() => geminiAI.latestResponse != null);
@@ -368,6 +376,25 @@ public class HandManager : MonoBehaviour
         if (endTurnButton != null) endTurnButton.interactable = true;
     }
 
+=======
+
+        // 4) End-of-turn housekeeping (same as AITurn coroutine did)
+        isAITurn = true;
+        ResolveRulesAndScoringForPlayedCards();
+        yield return new WaitForSeconds(1.5f);
+        if (!gameEnd)
+        {
+            if (turn != 0)
+            {
+                DrawAICards(ruleDraw);
+                yield return new WaitForSeconds(1.5f);
+            }
+            if (endTurnButton != null) endTurnButton.interactable = true;
+            FinishTurn();
+        }
+    }
+
+>>>>>>> Stashed changes
     private void DrawAICardsInstant(int count)
     {
         for (int i = 0; i < count; i++)
@@ -463,26 +490,46 @@ public class HandManager : MonoBehaviour
                     {
                         anim.SetTrigger("enemyPlay");
                     }
+<<<<<<< Updated upstream
                     yield return new WaitForSeconds(0.5f);
+=======
+                    yield return new WaitForSeconds(0.3f);
+>>>>>>> Stashed changes
                     Destroy(visualCard, 2.2f);
                 }
             }
         }
 
         foreach (var c in playedCards) deck.AddToDiscard(c);
+<<<<<<< Updated upstream
         isAITurn = true;
         FinishTurn();
+=======
+        UpdateDiscardTopCard();
+        UpdateHandUI();
+        isAITurn = false;
+        ResolveRulesAndScoringForPlayedCards();
+        if (!gameEnd) FinishTurn();
+>>>>>>> Stashed changes
     }
 
     // ---- Ending turn ----
     void FinishTurn()
     {
+<<<<<<< Updated upstream
         ResolveRulesAndScoringForPlayedCards();
 
         // If we already fired the AI request earlier in the player's coroutine, do NOT start AITurn again.
         if (!isAITurn && !aiRequestPrefetchedThisTurn)
             StartCoroutine(AITurn());
 
+=======
+        // If we already fired the AI request earlier in the player's coroutine, do NOT start AITurn again.
+        if (isAITurn && !aiRequestPrefetchedThisTurn)
+        {
+            StartCoroutine(AITurn());
+        }
+>>>>>>> Stashed changes
         isAITurn = false;
     }
 
@@ -526,7 +573,11 @@ public class HandManager : MonoBehaviour
                 turnPoints += val;
             }
 
+<<<<<<< Updated upstream
             if (isAITurn)
+=======
+            if (!isAITurn)
+>>>>>>> Stashed changes
             {
                 totalAIPoints += turnPoints;
                 Debug.Log($"Turn points: {turnPoints}, AI Total points: {totalAIPoints}");
@@ -556,8 +607,13 @@ public class HandManager : MonoBehaviour
                           "Using the rules listed in 'rules', and the cards in your hand, denoted by" +
                           "'playerHand' and the card shown on the discard pile, denoted as 'discardTop'," +
                           "you need to take your go and return the details." +
+<<<<<<< Updated upstream
                           "For discarded card, give ONLY the number for location of the card for your response." +
                           "You can play any number of cards at once, separate each card played with a /.",
+=======
+                          "For discarded card, give ONLY the number for location of the card for your response, first card being 0." +
+                          "You must discard multiple cards at once, separate each card discarded with a '/' (eg: 0/2/4).",
+>>>>>>> Stashed changes
             rules = new GeminiRules
             {
                 rules = GetActiveRulesForAI()
@@ -570,9 +626,12 @@ public class HandManager : MonoBehaviour
 
     System.Collections.IEnumerator AITurn()
     {
+<<<<<<< Updated upstream
         if (turn != 0) DrawAICards(ruleDraw);
         UpdateHandUI();
 
+=======
+>>>>>>> Stashed changes
         GeminiRequest req = BuildAIRequest();
 
         Debug.Log("Button clicked — sending request to Gemini...");
@@ -593,8 +652,13 @@ public class HandManager : MonoBehaviour
         }
 
         geminiAI.ResetLatestResponse();
+        yield return new WaitForSeconds(2f);
+        DrawCards(ruleDraw);
         turn += 1;
+<<<<<<< Updated upstream
         if (turn != 0) DrawCards(ruleDraw);
+=======
+>>>>>>> Stashed changes
         UpdateHandUI();
         selectedCards.Clear();
         endTurnButton.interactable = true;
@@ -636,6 +700,7 @@ public class HandManager : MonoBehaviour
     void EndGame()
     {
         Debug.Log($"Game Over!");
+        gameEnd = true;
         if (rulePointsWin)
         {
             if (totalPoints > totalAIPoints) Debug.Log($"Player Wins!");
@@ -722,6 +787,7 @@ public class HandManager : MonoBehaviour
                     yield return new WaitForSeconds(0.2f);
                 }
             }
+            UpdateHandUI();
         }
 
         Debug.Log($"There are {deck.Count} cards left in the deck");
@@ -774,6 +840,7 @@ public class HandManager : MonoBehaviour
                     yield return new WaitForSeconds(0.2f);
                 }
             }
+            UpdateHandUI();
         }
         Debug.Log($"There are {deck.Count} cards left in the deck");
         UpdateHandUI();
@@ -891,7 +958,7 @@ public class HandManager : MonoBehaviour
             aiRules.Add($"Maximum hand size is {ruleMaxHand} card(s).");
 
         if (rulePointsEnabled)
-            aiRules.Add("You gain points equal to value of cards.");
+            aiRules.Add("You gain points equal to value of cards discarded.");
 
         if (rulePointsEnd)
             aiRules.Add($"The game ends when a player reaches {pointEndLimit} points.");

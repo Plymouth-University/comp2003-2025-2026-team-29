@@ -3608,7 +3608,7 @@ MonoBehaviour:
   cardTextures:
   - {fileID: 2800000, guid: a3277bba2a2d0af4e8e2c1017786f569, type: 3}
   - {fileID: 2800000, guid: 27d47767ca2e0b54bbe5e64d967f3a12, type: 3}
-  - {fileID: 2800000, guid: ca38c6aa65aa97c46b198b99a5985580, type: 3}
+  - {fileID: 2800000, guid: 5b859ce60e58dcc4aae2b52a35f75720, type: 3}
   - {fileID: 2800000, guid: 63f66e6f37aa0414ea806dc87cbb9012, type: 3}
   - {fileID: 2800000, guid: 9cf42f866113b94459e83bd4ac5e60fc, type: 3}
   - {fileID: 2800000, guid: 57a0a9d94a874fa4e8a6fe8264de776d, type: 3}
