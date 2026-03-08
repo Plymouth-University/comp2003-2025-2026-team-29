@@ -3682,6 +3682,8 @@ MonoBehaviour:
   ruleReshuffle: 0
   ruleJoker: 0
   rulesCard: 0
+  ruleDrawHand: 0
+  ruleTurnLimit: 0
   rules: []
   geminiAI: {fileID: 1662743510}
 --- !u!4 &1722398834

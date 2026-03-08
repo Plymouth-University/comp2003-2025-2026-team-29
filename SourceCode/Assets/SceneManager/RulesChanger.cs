@@ -52,6 +52,13 @@ public class RuleChanger : MonoBehaviour
 
     // ---- Draw hand ----
     public void ToggleDrawHand() => gameRules.ruleDrawHand = !gameRules.ruleDrawHand;
+
+    // ---- Turn limit ----
+    public void SetTurnLimit(string value)
+    {
+        if (int.TryParse(value, out int count))
+            gameRules.ruleTurnLimit = count;
+    }
 }
 
 

@@ -52,6 +52,7 @@ public class HandManager : MonoBehaviour
     public bool ruleJoker = false;          //Rule 8
     public bool rulesCard = false;          //Rule 9
     public bool ruleDrawHand = false;       //Rule 10
+    public int ruleTurnLimit = 0;           //Rule 11
     public List<Rule> rules;                //List of Rules
 
     // ---- AI ----
@@ -71,6 +72,7 @@ public class HandManager : MonoBehaviour
         rulePointsWin = gameRules.rulePointsWin;
         pointEndLimit = gameRules.pointEndLimit;
         ruleDrawHand = gameRules.ruleDrawHand;
+        ruleTurnLimit = gameRules.ruleTurnLimit;
         rules = new List<Rule> {
             new Rule { Name = "Starting hand size", Enabled = ruleStartHand != 5, OnEnable = () =>
                 {
@@ -113,7 +115,17 @@ public class HandManager : MonoBehaviour
             new Rule { Name = "Reshuffle deck when empty", Enabled = ruleReshuffle, OnEnable = () => ruleReshuffle = true },
             new Rule { Name = "Jokers enabled", Enabled = ruleJoker, OnEnable = () => { ruleJoker = true; deck.AddJoker(); deck.Shuffle(); } },
             new Rule { Name = "Rules Card enabled", Enabled = rulesCard, OnEnable = () => { rulesCard = true; deck.AddRules(); deck.Shuffle(); } },
-            new Rule { Name = "Draw up to hand enabled", Enabled = ruleDrawHand, OnEnable = () => ruleDrawHand = true }
+            new Rule { Name = "Draw up to hand enabled", Enabled = ruleDrawHand, OnEnable = () => ruleDrawHand = true },
+            new Rule
+            {
+                Name = "Turn limit",
+                Enabled = ruleTurnLimit > 0,
+                OnEnable = () =>
+                {
+                    ruleTurnLimit = UnityEngine.Random.Range(turn + 3, turn + 8); // set limit to random 3–8 from current turn
+                    Debug.Log($"Turn limit set to turn {ruleTurnLimit}");
+                }
+            }
         };
         deck = new Deck();
         if (ruleJoker) deck.AddJoker();
@@ -465,10 +477,9 @@ public class HandManager : MonoBehaviour
             }
             UpdateDiscardTopCard();
 
-            if (rulePointsEnd && (totalPoints >= pointEndLimit || totalAIPoints >= pointEndLimit))
-            {
-                EndGame();
-            }
+            if (rulePointsEnd && (totalPoints >= pointEndLimit || totalAIPoints >= pointEndLimit)) EndGame();
+
+            if (ruleTurnLimit != 0 && turn >= ruleTurnLimit - 1 && isAITurn) EndGame();
         }
         if (!isAITurn) StartCoroutine(AITurn());
         isAITurn = false;
@@ -572,6 +583,8 @@ public class HandManager : MonoBehaviour
             else Debug.Log($"It was a tie!");
         }
         endTurnButton.interactable = false;
+        ruleDraw = 0;
+        ruleDrawHand = false;
         foreach (Transform child in cardParent)
         {
             Button btn = child.GetComponent<Button>();
@@ -859,6 +872,9 @@ public class HandManager : MonoBehaviour
 
         if (ruleDrawHand)
             aiRules.Add("On turn start, you draw cards up to the starting hand amount {ruleStartHand}.");
+
+        if (ruleTurnLimit > 0)
+            aiRules.Add("Game will end after turn {ruleTurnLimit}.");
 
         return aiRules;
     }

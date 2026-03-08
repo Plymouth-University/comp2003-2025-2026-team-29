@@ -18,11 +18,19 @@ public class RulesButtonHandler : MonoBehaviour
         }
         if (int.TryParse(points, out number))
         {
-            if (number > 0)
+            if (number >= 0)
             {
-                gameRules.rulePointsEnd = true;
                 gameRules.pointEndLimit = number;
-                Debug.Log($"End game by points enabled. Points to reach: {number}");
+                if (number > 0)
+                {
+                    gameRules.rulePointsEnd = true;
+                    Debug.Log($"End game by points enabled. Points to reach: {number}");
+                }
+                else
+                {
+                    gameRules.rulePointsEnd = false;
+                    Debug.Log($"End game by points disabled.");
+                }
             }
         }
         else
@@ -41,6 +49,8 @@ public class RulesButtonHandler : MonoBehaviour
                 if (gameRules != null) gameRules.ruleStartHand = number;
                 Debug.Log("Starting hand set to: " + number);
             }
+            else
+                Debug.Log($"Input a number > 0.");
         }
         else
         {
@@ -53,10 +63,13 @@ public class RulesButtonHandler : MonoBehaviour
         int number;
         if (int.TryParse(value, out number))
         {
-            if (number > 0)
+            if (number >= 0)
             {
                 if (gameRules != null) gameRules.ruleDraw = number;
-                Debug.Log("Draw per turn set to: " + number);
+                if (number > 0)
+                    Debug.Log("Draw per turn set to: " + number);
+                else
+                    Debug.Log("Draw per turn disabled");
             }
         }
         else
@@ -75,6 +88,8 @@ public class RulesButtonHandler : MonoBehaviour
                 if (gameRules != null) gameRules.ruleMaxHand = number;
                 Debug.Log("Max hand set to: " + number);
             }
+            else
+                Debug.Log($"Input a number > 0.");
         }
         else
         {
@@ -116,6 +131,26 @@ public class RulesButtonHandler : MonoBehaviour
     {
         if (gameRules != null) gameRules.ruleDrawHand = !gameRules.ruleDrawHand;
         Debug.Log("Rules card enabled: " + gameRules.ruleDrawHand);
+    }
+
+    public void SetTurnLimit(string value)
+    {
+        int number;
+        if (int.TryParse(value, out number))
+        {
+            if (number >= 0)
+            {
+                if (gameRules != null) gameRules.ruleTurnLimit = number;
+                if (number > 0)
+                    Debug.Log("Turn limit set to: " + number);
+                else
+                    Debug.Log("Turn limit disabled");
+            }
+        }
+        else
+        {
+            Debug.Log($"Input a number.");
+        }
     }
 }
 
