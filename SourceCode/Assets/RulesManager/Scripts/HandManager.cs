@@ -25,6 +25,7 @@ public class HandManager : MonoBehaviour
     public Animator deckShuffler;
     public Animator cardShuffler;
 
+
     // ---- Game Logic ----
     public Deck deck;
     public List<Card> playerHand = new List<Card>();
@@ -35,13 +36,6 @@ public class HandManager : MonoBehaviour
     private int currentJokerIndex = -1;
     private int turn = 0;
     private bool isAITurn = false;
-    private bool gameEnd = false;
-
-    // NEW: prevents starting AITurn twice when we prefetch the request
-    private bool aiRequestPrefetchedThisTurn = false;
-
-    // NEW: prevents starting AITurn twice when we prefetch the request
-    private bool aiRequestPrefetchedThisTurn = false;
 
     // ---- Rules & Scoring ----
     public GameRulesSO gameRules;
@@ -75,7 +69,6 @@ public class HandManager : MonoBehaviour
         rulePointsEnd = gameRules.rulePointsEnd;
         rulePointsWin = gameRules.rulePointsWin;
         pointEndLimit = gameRules.pointEndLimit;
-
         rules = new List<Rule> {
             new Rule { Name = "Starting hand size", Enabled = ruleStartHand != 5, OnEnable = () =>
                 {
@@ -119,7 +112,6 @@ public class HandManager : MonoBehaviour
             new Rule { Name = "Jokers enabled", Enabled = ruleJoker, OnEnable = () => { ruleJoker = true; deck.AddJoker(); deck.Shuffle(); } },
             new Rule { Name = "Rules Card enabled", Enabled = rulesCard, OnEnable = () => { rulesCard = true; deck.AddRules(); deck.Shuffle(); } }
         };
-
         deck = new Deck();
         if (ruleJoker) deck.AddJoker();
         if (rulesCard) deck.AddRules();
@@ -130,6 +122,8 @@ public class HandManager : MonoBehaviour
         // Draw starting hand
         DrawCards(ruleStartHand);
         DrawAICards(ruleStartHand);
+
+        UpdateHandUI();
 
         if (endTurnButton != null)
             endTurnButton.onClick.AddListener(OnEndTurnButtonPressed);
@@ -144,19 +138,40 @@ public class HandManager : MonoBehaviour
         foreach (Transform child in cardParent)
             Destroy(child.gameObject);
 
-        float spacing = 550f / (playerHand.Count - 1);
-        float startX = -((playerHand.Count - 1) * spacing) / 2;
-        float AIspacing = 550f / (AIHand.Count - 1);
-        float AIstartX = -((AIHand.Count - 1) * AIspacing) / 2;
+        float spacing = 0f;
+        float startX = 0;
+        float AIspacing = 0f;
+        float AIstartX = 0;
 
+        if (playerHand.Count > 1)
+        {
+            spacing = 550f / (playerHand.Count - 1);
+            startX = -((playerHand.Count - 1) * spacing) / 2;
+        }
+        else
+        {
+            spacing = 0f;
+            startX = 0;
+        }
+        if (AIHand.Count > 1)
+        {
+            AIspacing = 550f / (AIHand.Count - 1);
+            AIstartX = -((AIHand.Count - 1) * AIspacing) / 2;
+        }
+        else
+        {
+            AIspacing = 0f;
+            AIstartX = 0;
+        }
         for (int i = 0; i < playerHand.Count; i++)
         {
             GameObject cardButton = Instantiate(cardPrefab, cardParent);
             string cardKey = GetCardKey(playerHand[i]);
             if (cardTextureDict.TryGetValue(cardKey, out Texture2D tex))
             {
+                // --- Step 3: convert the texture to a Sprite and apply to the button ---
                 Sprite s = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
-                cardButton.GetComponent<Image>().sprite = s;
+                cardButton.GetComponent<Image>().sprite = s; // assign sprite to button
             }
 
             TMP_Text tmpText = cardButton.GetComponentInChildren<TMP_Text>();
@@ -169,9 +184,9 @@ public class HandManager : MonoBehaviour
             int index = i;
             cardButton.GetComponent<Button>().onClick.AddListener(() => OnCardClicked(index));
         }
-
         for (int i = 0; i < AIHand.Count; i++)
         {
+
             GameObject AICardButton = Instantiate(cardPrefab, cardParent);
 
             Image img = AICardButton.GetComponent<Image>();
@@ -186,6 +201,8 @@ public class HandManager : MonoBehaviour
 
             Button btn = AICardButton.GetComponent<Button>();
             btn.interactable = false;
+
+            int AIindex = i;
         }
     }
 
@@ -237,9 +254,6 @@ public class HandManager : MonoBehaviour
             jokerPanel.SetActive(true);
             return; // Wait for Joker value
         }
-
-        // NEW: AI request will be fired immediately after we apply the player's move,
-        // before running the visuals.
         PlaySelectedCards();
     }
 
@@ -251,55 +265,16 @@ public class HandManager : MonoBehaviour
 
     private IEnumerator PlaySelectedCardsCoroutine()
     {
-        if (endTurnButton != null) endTurnButton.interactable = false;
-
-        // 1) Apply the player move immediately (no animation waits), then fire the AI request.
         playedCards.Clear();
         selectedCards.Sort();
         selectedCards.Reverse();
-
-        // Capture the cards we are going to animate (because we are about to remove them from the hand).
-        List<Card> cardsToAnimate = new List<Card>(selectedCards.Count);
 
         foreach (int idx in selectedCards)
         {
             Card c = playerHand[idx];
             playedCards.Add(c);
-            cardsToAnimate.Add(c);
             playerHand.RemoveAt(idx);
-        }
-        selectedCards.Clear();
 
-        foreach (var c in playedCards)
-            deck.AddToDiscard(c);
-
-        UpdateDiscardTopCard();
-
-        // Resolve rules + scoring for the player's turn NOW (so the AI sees the correct state).
-<<<<<<< Updated upstream
-        ResolveRulesAndScoringForPlayedCards();
-
-        // Fire AI request immediately (while we show player animations).
-        if (geminiAI != null)
-        {
-            // Match original flow: AI draws at the start of its turn (but do it instantly so we don't block animations).
-            if (turn != 0 && ruleDraw > 0)
-                DrawAICardsInstant(ruleDraw);
-
-            GeminiRequest req = BuildAIRequest();
-            aiRequestPrefetchedThisTurn = true;
-            geminiAI.SendToGemini(req);
-        }
-=======
-
-        // Fire AI request immediately (while we show player animations).
->>>>>>> Stashed changes
-
-        // 2) Now do the player animations/UI.
-        UpdateHandUI();
-
-        foreach (Card c in cardsToAnimate)
-        {
             if (cardVisualPrefab != null && playAreaParent != null)
             {
                 GameObject visualCard = Instantiate(
@@ -317,7 +292,7 @@ public class HandManager : MonoBehaviour
                         MeshRenderer mr = cardFront.GetComponent<MeshRenderer>();
                         if (mr != null)
                         {
-                            mr.material = new Material(mr.material);
+                            mr.material = new Material(mr.material); // clone so it doesn't overwrite shared material
                             mr.material.mainTexture = tex;
                         }
                         else
@@ -338,87 +313,20 @@ public class HandManager : MonoBehaviour
                 {
                     anim.SetTrigger("playerPlay");
                 }
-
-                // Small stagger so multiple cards don't all appear at once.
+                // Wait for a short time before spawning the next card
                 yield return new WaitForSeconds(0.2f);
-                Destroy(visualCard, 1.0f);
+                Destroy(visualCard, 1.0f); // destroy after animation finishes
             }
+            UpdateHandUI();
         }
+        selectedCards.Clear();
+        foreach (var c in playedCards)
+            deck.AddToDiscard(c);
 
-        // 3) Wait for the AI response (it has been running in the background during animations).
-<<<<<<< Updated upstream
-        if (geminiAI != null)
-        {
-            yield return new WaitUntil(() => geminiAI.latestResponse != null);
-
-            if (geminiAI.latestResponse != null)
-            {
-                string AICards = geminiAI.latestResponse.discardReturn;
-                string[] aiHandStrings = geminiAI.latestResponse.updatedHand != null
-                    ? geminiAI.latestResponse.updatedHand.ToArray()
-                    : Array.Empty<string>();
-
-                Debug.Log("AI response");
-                Debug.Log("Action = " + AICards);
-                Debug.Log("Hand = " + string.Join(", ", aiHandStrings));
-
-                PlayAICards(AICards);
-            }
-
-            geminiAI.ResetLatestResponse();
-            aiRequestPrefetchedThisTurn = false;
-        }
-
-        // 4) End-of-turn housekeeping (same as AITurn coroutine did)
-        turn += 1;
-        if (turn != 0) DrawCards(ruleDraw);
+        UpdateDiscardTopCard();
         UpdateHandUI();
-        if (endTurnButton != null) endTurnButton.interactable = true;
-    }
 
-=======
-
-        // 4) End-of-turn housekeeping (same as AITurn coroutine did)
-        isAITurn = true;
-        ResolveRulesAndScoringForPlayedCards();
-        yield return new WaitForSeconds(1.5f);
-        if (!gameEnd)
-        {
-            if (turn != 0)
-            {
-                DrawAICards(ruleDraw);
-                yield return new WaitForSeconds(1.5f);
-            }
-            if (endTurnButton != null) endTurnButton.interactable = true;
-            FinishTurn();
-        }
-    }
-
->>>>>>> Stashed changes
-    private void DrawAICardsInstant(int count)
-    {
-        for (int i = 0; i < count; i++)
-        {
-            if (deck.Count == 0)
-            {
-                if (ruleReshuffle && deck.DiscardCount > 0)
-                {
-                    // Instant reshuffle (no animations here)
-                    deck.Reshuffle();
-                }
-                else
-                {
-                    break;
-                }
-            }
-
-            if (AIHand.Count < ruleMaxHand || ruleMaxHand == 0)
-            {
-                Card c = deck.Draw();
-                if (c != null)
-                    AIHand.Add(c);
-            }
-        }
+        FinishTurn();
     }
 
     void PlayAICards(string AIIndices)
@@ -447,11 +355,9 @@ public class HandManager : MonoBehaviour
 
             if (idx >= 0 && idx < AIHand.Count)
             {
-                UpdateHandUI();
                 Card c = AIHand[idx];
                 playedCards.Add(c);
                 AIHand.RemoveAt(idx);
-
                 if (cardVisualPrefab != null && playAreaParent != null)
                 {
                     GameObject visualCard = Instantiate(
@@ -469,7 +375,7 @@ public class HandManager : MonoBehaviour
                             MeshRenderer mr = cardFront.GetComponent<MeshRenderer>();
                             if (mr != null)
                             {
-                                mr.material = new Material(mr.material);
+                                mr.material = new Material(mr.material); // clone so it doesn't overwrite shared material
                                 mr.material.mainTexture = tex;
                             }
                             else
@@ -490,50 +396,22 @@ public class HandManager : MonoBehaviour
                     {
                         anim.SetTrigger("enemyPlay");
                     }
-<<<<<<< Updated upstream
+                    // Wait for a short time before spawning the next card
                     yield return new WaitForSeconds(0.5f);
-=======
-                    yield return new WaitForSeconds(0.3f);
->>>>>>> Stashed changes
                     Destroy(visualCard, 2.2f);
                 }
+                UpdateHandUI();
             }
         }
-
         foreach (var c in playedCards) deck.AddToDiscard(c);
-<<<<<<< Updated upstream
-        isAITurn = true;
-        FinishTurn();
-=======
         UpdateDiscardTopCard();
         UpdateHandUI();
-        isAITurn = false;
-        ResolveRulesAndScoringForPlayedCards();
-        if (!gameEnd) FinishTurn();
->>>>>>> Stashed changes
+        isAITurn = true;
+        FinishTurn();
     }
 
     // ---- Ending turn ----
     void FinishTurn()
-    {
-<<<<<<< Updated upstream
-        ResolveRulesAndScoringForPlayedCards();
-
-        // If we already fired the AI request earlier in the player's coroutine, do NOT start AITurn again.
-        if (!isAITurn && !aiRequestPrefetchedThisTurn)
-            StartCoroutine(AITurn());
-
-=======
-        // If we already fired the AI request earlier in the player's coroutine, do NOT start AITurn again.
-        if (isAITurn && !aiRequestPrefetchedThisTurn)
-        {
-            StartCoroutine(AITurn());
-        }
->>>>>>> Stashed changes
-        isAITurn = false;
-    }
-
-    private void ResolveRulesAndScoringForPlayedCards()
     {
         // ---- Handle Rules Cards ----
         foreach (var c in playedCards)
@@ -572,12 +450,7 @@ public class HandManager : MonoBehaviour
                 }
                 turnPoints += val;
             }
-
-<<<<<<< Updated upstream
             if (isAITurn)
-=======
-            if (!isAITurn)
->>>>>>> Stashed changes
             {
                 totalAIPoints += turnPoints;
                 Debug.Log($"Turn points: {turnPoints}, AI Total points: {totalAIPoints}");
@@ -587,7 +460,6 @@ public class HandManager : MonoBehaviour
                 totalPoints += turnPoints;
                 Debug.Log($"Turn points: {turnPoints}, Total points: {totalPoints}");
             }
-
             UpdateDiscardTopCard();
 
             if (rulePointsEnd && (totalPoints >= pointEndLimit || totalAIPoints >= pointEndLimit))
@@ -595,52 +467,36 @@ public class HandManager : MonoBehaviour
                 EndGame();
             }
         }
+        if (!isAITurn) StartCoroutine(AITurn());
+        isAITurn = false;
     }
 
-    private GeminiRequest BuildAIRequest()
+    System.Collections.IEnumerator AITurn()
     {
-        return new GeminiRequest
+        if (turn != 0) DrawAICards(ruleDraw);
+        GeminiRequest req = new GeminiRequest
         {
-            gameId = "CARDSRULE-2026-02-06-13-14-00",
+            gameId = "GAME-001",
             instruction = "You are a player in a card game." +
                           "The gameId is an identifier for the game." +
                           "Using the rules listed in 'rules', and the cards in your hand, denoted by" +
                           "'playerHand' and the card shown on the discard pile, denoted as 'discardTop'," +
                           "you need to take your go and return the details." +
-<<<<<<< Updated upstream
                           "For discarded card, give ONLY the number for location of the card for your response." +
-                          "You can play any number of cards at once, separate each card played with a /.",
-=======
-                          "For discarded card, give ONLY the number for location of the card for your response, first card being 0." +
-                          "You must discard multiple cards at once, separate each card discarded with a '/' (eg: 0/2/4).",
->>>>>>> Stashed changes
+                          "You can play 1 or more number of cards at once, seperate each card played with a /.",
             rules = new GeminiRules
             {
-                rules = GetActiveRulesForAI()
+                rules = GetActiveRulesForAI() // <-- only active rules
             },
             playerHand = AIHand.Select(c => c.ToString()).ToList(),
             discardTop = deck.DiscardCount > 0 ? deck.PeekDiscard().ToString() : "",
             stack = new List<string>()
         };
-    }
-
-    System.Collections.IEnumerator AITurn()
-    {
-<<<<<<< Updated upstream
-        if (turn != 0) DrawAICards(ruleDraw);
-        UpdateHandUI();
-
-=======
->>>>>>> Stashed changes
-        GeminiRequest req = BuildAIRequest();
-
-        Debug.Log("Button clicked — sending request to Gemini...");
         geminiAI.SendToGemini(req);
-
+        Debug.Log("Button clicked — sending request to Gemini...");
         endTurnButton.interactable = false;
         yield return new WaitUntil(() => geminiAI.latestResponse != null);
         Debug.Log(geminiAI.latestResponse);
-
         if (geminiAI.latestResponse != null)
         {
             string AICards = geminiAI.latestResponse.discardReturn;
@@ -650,16 +506,10 @@ public class HandManager : MonoBehaviour
             Debug.Log("Hand = " + string.Join(", ", AIHand));
             PlayAICards(AICards);
         }
-
         geminiAI.ResetLatestResponse();
-        yield return new WaitForSeconds(2f);
-        DrawCards(ruleDraw);
         turn += 1;
-<<<<<<< Updated upstream
-        if (turn != 0) DrawCards(ruleDraw);
-=======
->>>>>>> Stashed changes
         UpdateHandUI();
+        if (turn != 0) DrawCards(ruleDraw);
         selectedCards.Clear();
         endTurnButton.interactable = true;
     }
@@ -696,11 +546,11 @@ public class HandManager : MonoBehaviour
         }
     }
 
+
     // ---- Ending the game ----
     void EndGame()
     {
         Debug.Log($"Game Over!");
-        gameEnd = true;
         if (rulePointsWin)
         {
             if (totalPoints > totalAIPoints) Debug.Log($"Player Wins!");
@@ -733,6 +583,7 @@ public class HandManager : MonoBehaviour
                 }
                 else
                 {
+                    // Can't draw more cards
                     break;
                 }
             }
@@ -744,15 +595,16 @@ public class HandManager : MonoBehaviour
                 {
                     playerHand.Add(c);
 
+                    // ---- Spawn visual card ----
                     if (cardVisualPrefab != null && playAreaParent != null)
                     {
                         GameObject visualCard = Instantiate(
                             cardVisualPrefab,
-                            playAreaParent.position,
+                            playAreaParent.position, // spawn at deck position
                             Quaternion.identity,
                             playAreaParent
                         );
-
+                        // Assign the correct texture
                         if (cardTextureDict.TryGetValue(GetCardKey(c), out Texture2D tex))
                         {
                             Transform cardFront = visualCard.transform.Find("CardFront");
@@ -761,7 +613,7 @@ public class HandManager : MonoBehaviour
                                 MeshRenderer mr = cardFront.GetComponent<MeshRenderer>();
                                 if (mr != null)
                                 {
-                                    mr.material = new Material(mr.material);
+                                    mr.material = new Material(mr.material); // clone so it doesn't overwrite shared material
                                     mr.material.mainTexture = tex;
                                 }
                                 else
@@ -773,6 +625,7 @@ public class HandManager : MonoBehaviour
                             {
                                 Debug.LogError("CardFront child not found on visualCard prefab!");
                             }
+
                         }
 
                         visualCard.transform.localScale = Vector3.one * 0.2f;
@@ -787,10 +640,11 @@ public class HandManager : MonoBehaviour
                     yield return new WaitForSeconds(0.2f);
                 }
             }
-            UpdateHandUI();
         }
 
         Debug.Log($"There are {deck.Count} cards left in the deck");
+
+        // Update UI after all cards drawn
         UpdateHandUI();
     }
 
@@ -811,6 +665,7 @@ public class HandManager : MonoBehaviour
                 }
                 else
                 {
+                    // Can't draw more cards
                     break;
                 }
             }
@@ -824,7 +679,7 @@ public class HandManager : MonoBehaviour
                     {
                         GameObject visualCard = Instantiate(
                             cardVisualPrefab,
-                            playAreaParent.position,
+                            playAreaParent.position, // spawn at deck position
                             Quaternion.identity,
                             playAreaParent
                         );
@@ -840,10 +695,18 @@ public class HandManager : MonoBehaviour
                     yield return new WaitForSeconds(0.2f);
                 }
             }
-            UpdateHandUI();
         }
         Debug.Log($"There are {deck.Count} cards left in the deck");
         UpdateHandUI();
+    }
+
+    Sprite ConvertTextureToSprite(Texture2D texture)
+    {
+        return Sprite.Create(
+            texture,
+            new Rect(0, 0, texture.width, texture.height), // full texture
+            new Vector2(0.5f, 0.5f) // pivot in center
+        );
     }
 
     Sprite GetCardBackSprite()
@@ -861,6 +724,7 @@ public class HandManager : MonoBehaviour
         );
     }
 
+
     void LoadCardTextures()
     {
         cardTextureDict.Clear();
@@ -870,15 +734,18 @@ public class HandManager : MonoBehaviour
             string key;
             if (tex.name.StartsWith("Joker"))
             {
-                key = tex.name;
+                // Keep Joker names as-is
+                key = tex.name; // e.g., "Joker cards-R"
             }
             else if (tex.name.StartsWith("Rules"))
             {
-                key = tex.name;
+                // Keep Rules card name as-is
+                key = tex.name; // e.g., "Rules card"
             }
             else
             {
-                key = tex.name.Replace(" cards-", "-");
+                // Normal cards
+                key = tex.name.Replace(" cards-", "-"); // "Spade cards-6" -> "Spade-6"
             }
             cardTextureDict[key] = tex;
         }
@@ -907,7 +774,6 @@ public class HandManager : MonoBehaviour
     {
         StartCoroutine(ReshuffleCoroutine());
     }
-
     private IEnumerator ReshuffleCoroutine()
     {
         if (deck.DiscardCount == 0) yield break;
@@ -915,7 +781,8 @@ public class HandManager : MonoBehaviour
         if (deckShuffler != null) deckShuffler.SetTrigger("deckShuffle");
         if (cardShuffler != null) cardShuffler.SetTrigger("cardShuffle");
 
-        yield return new WaitForSeconds(4.0f);
+        yield return new WaitForSeconds(4.0f); // Wait for animation duration
+
         deck.Reshuffle();
     }
 
@@ -948,7 +815,7 @@ public class HandManager : MonoBehaviour
     {
         List<string> aiRules = new List<string>();
 
-        if (ruleStartHand != 5)
+        if (ruleStartHand != 5) // assume default 5 means inactive
             aiRules.Add($"Starting hand size is {ruleStartHand} cards.");
 
         if (ruleDraw > 0)
@@ -958,7 +825,7 @@ public class HandManager : MonoBehaviour
             aiRules.Add($"Maximum hand size is {ruleMaxHand} card(s).");
 
         if (rulePointsEnabled)
-            aiRules.Add("You gain points equal to value of cards discarded.");
+            aiRules.Add("You gain points equal to value of cards.");
 
         if (rulePointsEnd)
             aiRules.Add($"The game ends when a player reaches {pointEndLimit} points.");
@@ -1032,8 +899,8 @@ public class HandManager : MonoBehaviour
 
         public Card PeekDiscard()
         {
-            if (discardPile.Count == 0) return null;
-            return discardPile[discardPile.Count - 1];
+            if (discardPile.Count == 0) return null; // empty discard
+            return discardPile[discardPile.Count - 1];    // last card = top of discard
         }
 
         public void Shuffle()
@@ -1065,10 +932,10 @@ public class HandManager : MonoBehaviour
     public class Rule
     {
         public string Name;
-        public bool Enabled;
-        public List<string> RequiresNames;
-        public Action OnEnable;
-        public Action OnDisable;
+        public bool Enabled;                  // Whether the rule is currently active
+        public List<string> RequiresNames;    // Other rules that must be enabled first
+        public Action OnEnable;               // Action when the rule is enabled
+        public Action OnDisable;              // Action when the rule is disabled
 
         public void Enable()
         {
