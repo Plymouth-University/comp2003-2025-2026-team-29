@@ -111,5 +111,11 @@ public class RulesButtonHandler : MonoBehaviour
         if (gameRules != null) gameRules.rulesCard = !gameRules.rulesCard;
         Debug.Log("Rules card enabled: " + gameRules.rulesCard);
     }
+
+    public void EnableDrawHand()
+    {
+        if (gameRules != null) gameRules.ruleDrawHand = !gameRules.ruleDrawHand;
+        Debug.Log("Rules card enabled: " + gameRules.ruleDrawHand);
+    }
 }
 

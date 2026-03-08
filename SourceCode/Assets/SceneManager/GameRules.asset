@@ -13,12 +13,13 @@ MonoBehaviour:
   m_Name: GameRules
   m_EditorClassIdentifier: Assembly-CSharp::GameRulesSO
   ruleReshuffle: 0
-  ruleJoker: 0
-  rulesCard: 0
+  ruleJoker: 1
+  rulesCard: 1
   ruleStartHand: 5
-  ruleDraw: 0
+  ruleDraw: 2
   ruleMaxHand: 0
-  rulePointsEnabled: 0
-  rulePointsEnd: 0
-  rulePointsWin: 0
-  pointEndLimit: 0
+  rulePointsEnabled: 1
+  rulePointsEnd: 1
+  rulePointsWin: 1
+  pointEndLimit: 120
+  ruleDrawHand: 1

@@ -51,6 +51,7 @@ public class HandManager : MonoBehaviour
     public bool ruleReshuffle = false;      //Rule 7
     public bool ruleJoker = false;          //Rule 8
     public bool rulesCard = false;          //Rule 9
+    public bool ruleDrawHand = false;       //Rule 10
     public List<Rule> rules;                //List of Rules
 
     // ---- AI ----
@@ -69,6 +70,7 @@ public class HandManager : MonoBehaviour
         rulePointsEnd = gameRules.rulePointsEnd;
         rulePointsWin = gameRules.rulePointsWin;
         pointEndLimit = gameRules.pointEndLimit;
+        ruleDrawHand = gameRules.ruleDrawHand;
         rules = new List<Rule> {
             new Rule { Name = "Starting hand size", Enabled = ruleStartHand != 5, OnEnable = () =>
                 {
@@ -110,7 +112,8 @@ public class HandManager : MonoBehaviour
             },
             new Rule { Name = "Reshuffle deck when empty", Enabled = ruleReshuffle, OnEnable = () => ruleReshuffle = true },
             new Rule { Name = "Jokers enabled", Enabled = ruleJoker, OnEnable = () => { ruleJoker = true; deck.AddJoker(); deck.Shuffle(); } },
-            new Rule { Name = "Rules Card enabled", Enabled = rulesCard, OnEnable = () => { rulesCard = true; deck.AddRules(); deck.Shuffle(); } }
+            new Rule { Name = "Rules Card enabled", Enabled = rulesCard, OnEnable = () => { rulesCard = true; deck.AddRules(); deck.Shuffle(); } },
+            new Rule { Name = "Draw up to hand enabled", Enabled = ruleDrawHand, OnEnable = () => ruleDrawHand = true }
         };
         deck = new Deck();
         if (ruleJoker) deck.AddJoker();
@@ -473,7 +476,13 @@ public class HandManager : MonoBehaviour
 
     System.Collections.IEnumerator AITurn()
     {
-        if (turn != 0) DrawAICards(ruleDraw);
+        yield return new WaitForSeconds(0.5f);
+        if (turn != 0)
+        {
+            if ((ruleDrawHand) && (ruleStartHand - AIHand.Count) > 0) DrawAICards(ruleStartHand - AIHand.Count);
+            DrawAICards(ruleDraw);
+            yield return new WaitForSeconds(0.5f * ruleDraw);
+        }
         GeminiRequest req = new GeminiRequest
         {
             gameId = "GAME-001",
@@ -505,11 +514,16 @@ public class HandManager : MonoBehaviour
             Debug.Log("Action = " + AICards);
             Debug.Log("Hand = " + string.Join(", ", AIHand));
             PlayAICards(AICards);
+            yield return new WaitForSeconds(1.0f);
         }
         geminiAI.ResetLatestResponse();
         turn += 1;
         UpdateHandUI();
-        if (turn != 0) DrawCards(ruleDraw);
+        if (turn != 0)
+        {
+            if ((ruleDrawHand) && (ruleStartHand - playerHand.Count) > 0) DrawCards(ruleStartHand - playerHand.Count);
+            DrawCards(ruleDraw);
+        }
         selectedCards.Clear();
         endTurnButton.interactable = true;
     }
@@ -638,6 +652,7 @@ public class HandManager : MonoBehaviour
                         Destroy(visualCard, 1.0f);
                     }
                     yield return new WaitForSeconds(0.2f);
+                    UpdateHandUI();
                 }
             }
         }
@@ -841,6 +856,9 @@ public class HandManager : MonoBehaviour
 
         if (rulesCard)
             aiRules.Add("Special Rules cards are enabled in the game. Rules cards add a rule to the game when played and are worth 0 points (if points are on).");
+
+        if (ruleDrawHand)
+            aiRules.Add("On turn start, you draw cards up to the starting hand amount {ruleStartHand}.");
 
         return aiRules;
     }

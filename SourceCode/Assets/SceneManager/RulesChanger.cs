@@ -49,6 +49,9 @@ public class RuleChanger : MonoBehaviour
 
     // ---- Rules card ----
     public void ToggleRulesCard() => gameRules.rulesCard = !gameRules.rulesCard;
+
+    // ---- Draw hand ----
+    public void ToggleDrawHand() => gameRules.ruleDrawHand = !gameRules.ruleDrawHand;
 }
 
 

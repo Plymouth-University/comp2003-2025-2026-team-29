@@ -13,5 +13,6 @@ public class GameRulesSO : ScriptableObject
     public bool rulePointsEnd = false;
     public bool rulePointsWin = false;
     public int pointEndLimit = 0;
+    public bool ruleDrawHand = false;
 }
 
