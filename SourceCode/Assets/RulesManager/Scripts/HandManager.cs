@@ -56,6 +56,7 @@ public class HandManager : MonoBehaviour
     public int ruleTurnLimit = 0;           //Rule 11
     public bool ruleDeckout = false;        //Rule 12
     public bool ruleOutofCards = false;     //Rule 13
+    public bool ruleLeastCardsWin = false;  //Rule 14
     public List<Rule> rules;                //List of Rules
 
     // ---- AI ----
@@ -78,6 +79,7 @@ public class HandManager : MonoBehaviour
         ruleTurnLimit = gameRules.ruleTurnLimit;
         ruleDeckout = gameRules.ruleDeckout;
         ruleOutofCards = gameRules.ruleOutofCards;
+        ruleLeastCardsWin = gameRules.ruleLeastCardsWin;
         rules = new List<Rule> {
             new Rule { Name = "Starting hand size", Enabled = ruleStartHand != 5, OnEnable = () =>
                 {
@@ -132,7 +134,8 @@ public class HandManager : MonoBehaviour
                 }
             },
             new Rule { Name = "End game on deckout", Enabled = ruleDeckout, OnEnable = () => ruleDeckout = true },
-            new Rule { Name = "End game when out of cards", Enabled = ruleOutofCards, OnEnable = () => ruleOutofCards = true }
+            new Rule { Name = "End game when out of cards", Enabled = ruleOutofCards, OnEnable = () => ruleOutofCards = true },
+            new Rule { Name = "Win game with least cards in hand", Enabled = ruleLeastCardsWin, OnEnable = () => ruleLeastCardsWin = true }
         };
         deck = new Deck();
         if (ruleJoker) deck.AddJoker();
@@ -596,9 +599,21 @@ public class HandManager : MonoBehaviour
         {
             if (totalPoints > totalAIPoints) Debug.Log($"Player Wins!");
             else if (totalAIPoints > totalPoints) Debug.Log($"AI Wins!");
+            else if (ruleLeastCardsWin)
+            {
+                if (playerHand.Count < AIHand.Count) Debug.Log($"Player Wins!");
+                else if (playerHand.Count > AIHand.Count) Debug.Log($"AI Wins!");
+                else Debug.Log($"It was a tie!");
+            }
             else Debug.Log($"It was a tie!");
         }
-        endTurnButton.interactable = false;
+        else if (ruleLeastCardsWin)
+        {
+            if (playerHand.Count > AIHand.Count) Debug.Log($"Player Wins!");
+            else if (playerHand.Count < AIHand.Count) Debug.Log($"AI Wins!");
+            else Debug.Log($"It was a tie!");
+        }
+            endTurnButton.interactable = false;
         ruleDraw = 0;
         ruleDrawHand = false;
         foreach (Transform child in cardParent)
@@ -905,6 +920,9 @@ public class HandManager : MonoBehaviour
 
         if (ruleOutofCards)
             aiRules.Add("Game will end when you run out of cards in your hand.");
+
+        if (ruleLeastCardsWin)
+            aiRules.Add("Win the game by having the least cards in hand when the game ends.");
 
         return aiRules;
     }

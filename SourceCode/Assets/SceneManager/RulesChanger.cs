@@ -65,6 +65,9 @@ public class RuleChanger : MonoBehaviour
 
     // ---- Out of Cards ----
     public void ToggleOutofCards() => gameRules.ruleOutofCards = !gameRules.ruleOutofCards;
+
+    // ---- Least cards win ----
+    public void ToggleLeastCards() => gameRules.ruleLeastCardsWin = !gameRules.ruleLeastCardsWin;
 }
 
 

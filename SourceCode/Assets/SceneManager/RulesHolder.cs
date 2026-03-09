@@ -17,5 +17,6 @@ public class GameRulesSO : ScriptableObject
     public int ruleTurnLimit = 0;
     public bool ruleDeckout = false;
     public bool ruleOutofCards = false;
+    public bool ruleLeastCardsWin = false;
 }
 

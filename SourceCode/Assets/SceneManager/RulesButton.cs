@@ -164,5 +164,11 @@ public class RulesButtonHandler : MonoBehaviour
         if (gameRules != null) gameRules.ruleOutofCards = !gameRules.ruleOutofCards;
         Debug.Log("Out of cards enabled: " + gameRules.ruleOutofCards);
     }
+
+    public void EnableLeastCards()
+    {
+        if (gameRules != null) gameRules.ruleLeastCardsWin = !gameRules.ruleLeastCardsWin;
+        Debug.Log("Win with least cards enabled: " + gameRules.ruleLeastCardsWin);
+    }
 }
 
