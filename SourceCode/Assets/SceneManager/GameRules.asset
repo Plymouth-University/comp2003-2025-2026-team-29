@@ -24,3 +24,5 @@ MonoBehaviour:
   pointEndLimit: 0
   ruleDrawHand: 0
   ruleTurnLimit: 0
+  ruleDeckout: 0
+  ruleOutofCards: 0

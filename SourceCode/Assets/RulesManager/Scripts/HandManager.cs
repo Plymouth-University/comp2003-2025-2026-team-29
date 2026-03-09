@@ -55,6 +55,7 @@ public class HandManager : MonoBehaviour
     public bool ruleDrawHand = false;       //Rule 10
     public int ruleTurnLimit = 0;           //Rule 11
     public bool ruleDeckout = false;        //Rule 12
+    public bool ruleOutofCards = false;     //Rule 13
     public List<Rule> rules;                //List of Rules
 
     // ---- AI ----
@@ -76,6 +77,7 @@ public class HandManager : MonoBehaviour
         ruleDrawHand = gameRules.ruleDrawHand;
         ruleTurnLimit = gameRules.ruleTurnLimit;
         ruleDeckout = gameRules.ruleDeckout;
+        ruleOutofCards = gameRules.ruleOutofCards;
         rules = new List<Rule> {
             new Rule { Name = "Starting hand size", Enabled = ruleStartHand != 5, OnEnable = () =>
                 {
@@ -129,7 +131,8 @@ public class HandManager : MonoBehaviour
                     Debug.Log($"Turn limit set to turn {ruleTurnLimit}");
                 }
             },
-            new Rule { Name = "End game on deckout", Enabled = ruleDeckout, OnEnable = () => ruleDeckout = true }
+            new Rule { Name = "End game on deckout", Enabled = ruleDeckout, OnEnable = () => ruleDeckout = true },
+            new Rule { Name = "End game when out of cards", Enabled = ruleOutofCards, OnEnable = () => ruleOutofCards = true }
         };
         deck = new Deck();
         if (ruleJoker) deck.AddJoker();
@@ -345,6 +348,8 @@ public class HandManager : MonoBehaviour
         UpdateDiscardTopCard();
         UpdateHandUI();
 
+        if (ruleOutofCards && playerHand.Count == 0) EndGame();
+
         FinishTurn();
     }
 
@@ -534,15 +539,19 @@ public class HandManager : MonoBehaviour
                 yield return new WaitForSeconds(1.0f);
             }
             geminiAI.ResetLatestResponse();
+            if (ruleOutofCards && AIHand.Count == 0)
+                EndGame();
             turn += 1;
             UpdateHandUI();
-            if (turn != 0)
+            if (turn != 0 && !gameEnd)
             {
-                if ((ruleDrawHand) && (ruleStartHand - playerHand.Count) > 0) DrawCards(ruleStartHand - playerHand.Count);
-                DrawCards(ruleDraw);
+                {
+                    if ((ruleDrawHand) && (ruleStartHand - playerHand.Count) > 0) DrawCards(ruleStartHand - playerHand.Count);
+                    DrawCards(ruleDraw);
+                }
+                selectedCards.Clear();
+                endTurnButton.interactable = true;
             }
-            selectedCards.Clear();
-            endTurnButton.interactable = true;
         }
     }
 
@@ -893,6 +902,9 @@ public class HandManager : MonoBehaviour
 
         if (ruleDeckout)
             aiRules.Add("Game will end when the deck runs out of cards.");
+
+        if (ruleOutofCards)
+            aiRules.Add("Game will end when you run out of cards in your hand.");
 
         return aiRules;
     }

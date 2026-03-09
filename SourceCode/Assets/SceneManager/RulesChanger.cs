@@ -62,6 +62,9 @@ public class RuleChanger : MonoBehaviour
 
     // ---- Deckout ----
     public void ToggleDeckout() => gameRules.ruleDeckout = !gameRules.ruleDeckout;
+
+    // ---- Out of Cards ----
+    public void ToggleOutofCards() => gameRules.ruleOutofCards = !gameRules.ruleOutofCards;
 }
 
 

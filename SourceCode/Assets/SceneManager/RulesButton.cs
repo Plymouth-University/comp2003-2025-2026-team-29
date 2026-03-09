@@ -158,5 +158,11 @@ public class RulesButtonHandler : MonoBehaviour
         if (gameRules != null) gameRules.ruleDeckout = !gameRules.ruleDeckout;
         Debug.Log("Deckout enabled: " + gameRules.ruleDeckout);
     }
+
+    public void EnableOutofCards()
+    {
+        if (gameRules != null) gameRules.ruleOutofCards = !gameRules.ruleOutofCards;
+        Debug.Log("Out of cards enabled: " + gameRules.ruleOutofCards);
+    }
 }
 
