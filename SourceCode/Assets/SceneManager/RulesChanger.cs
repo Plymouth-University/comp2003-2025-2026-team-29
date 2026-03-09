@@ -49,6 +49,32 @@ public class RuleChanger : MonoBehaviour
 
     // ---- Rules card ----
     public void ToggleRulesCard() => gameRules.rulesCard = !gameRules.rulesCard;
+
+    // ---- Draw hand ----
+    public void ToggleDrawHand() => gameRules.ruleDrawHand = !gameRules.ruleDrawHand;
+
+    // ---- Turn limit ----
+    public void SetTurnLimit(string value)
+    {
+        if (int.TryParse(value, out int count))
+            gameRules.ruleTurnLimit = count;
+    }
+
+    // ---- Deckout ----
+    public void ToggleDeckout() => gameRules.ruleDeckout = !gameRules.ruleDeckout;
+
+    // ---- Out of Cards ----
+    public void ToggleOutofCards() => gameRules.ruleOutofCards = !gameRules.ruleOutofCards;
+
+    // ---- Least cards win ----
+    public void ToggleLeastCards() => gameRules.ruleLeastCardsWin = !gameRules.ruleLeastCardsWin;
+
+    // ---- Play amount ----
+    public void SetPlayAmount(string value)
+    {
+        if (int.TryParse(value, out int count))
+            gameRules.rulePlayAmount = count;
+    }
 }
 
 
