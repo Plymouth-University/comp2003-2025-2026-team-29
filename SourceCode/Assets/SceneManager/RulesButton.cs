@@ -170,5 +170,25 @@ public class RulesButtonHandler : MonoBehaviour
         if (gameRules != null) gameRules.ruleLeastCardsWin = !gameRules.ruleLeastCardsWin;
         Debug.Log("Win with least cards enabled: " + gameRules.ruleLeastCardsWin);
     }
+
+    public void SetPlayAmount(string value)
+    {
+        int number;
+        if (int.TryParse(value, out number))
+        {
+            if (number >= 0)
+            {
+                if (gameRules != null) gameRules.rulePlayAmount = number;
+                if (number > 0)
+                    Debug.Log("Card play limit set to: " + number);
+                else
+                    Debug.Log("Card play limit disabled");
+            }
+        }
+        else
+        {
+            Debug.Log($"Input a number.");
+        }
+    }
 }
 

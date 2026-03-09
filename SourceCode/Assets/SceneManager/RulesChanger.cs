@@ -68,6 +68,13 @@ public class RuleChanger : MonoBehaviour
 
     // ---- Least cards win ----
     public void ToggleLeastCards() => gameRules.ruleLeastCardsWin = !gameRules.ruleLeastCardsWin;
+
+    // ---- Play amount ----
+    public void SetPlayAmount(string value)
+    {
+        if (int.TryParse(value, out int count))
+            gameRules.rulePlayAmount = count;
+    }
 }
 
 

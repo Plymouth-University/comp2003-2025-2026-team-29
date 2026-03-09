@@ -57,6 +57,7 @@ public class HandManager : MonoBehaviour
     public bool ruleDeckout = false;        //Rule 12
     public bool ruleOutofCards = false;     //Rule 13
     public bool ruleLeastCardsWin = false;  //Rule 14
+    public int rulePlayAmount = 0;          //Rule 15
     public List<Rule> rules;                //List of Rules
 
     // ---- AI ----
@@ -80,6 +81,7 @@ public class HandManager : MonoBehaviour
         ruleDeckout = gameRules.ruleDeckout;
         ruleOutofCards = gameRules.ruleOutofCards;
         ruleLeastCardsWin = gameRules.ruleLeastCardsWin;
+        rulePlayAmount = gameRules.rulePlayAmount;
         rules = new List<Rule> {
             new Rule { Name = "Starting hand size", Enabled = ruleStartHand != 5, OnEnable = () =>
                 {
@@ -135,7 +137,17 @@ public class HandManager : MonoBehaviour
             },
             new Rule { Name = "End game on deckout", Enabled = ruleDeckout, OnEnable = () => ruleDeckout = true },
             new Rule { Name = "End game when out of cards", Enabled = ruleOutofCards, OnEnable = () => ruleOutofCards = true },
-            new Rule { Name = "Win game with least cards in hand", Enabled = ruleLeastCardsWin, OnEnable = () => ruleLeastCardsWin = true }
+            new Rule { Name = "Win game with least cards in hand", Enabled = ruleLeastCardsWin, OnEnable = () => ruleLeastCardsWin = true },
+            new Rule
+            {
+                Name = "Card play amount",
+                Enabled = rulePlayAmount > 0,
+                OnEnable = () =>
+                {
+                    rulePlayAmount = UnityEngine.Random.Range(1, 3); // set amount to random 1–3
+                    Debug.Log($"Card play max set to {rulePlayAmount}");
+                }
+            }
         };
         deck = new Deck();
         if (ruleJoker) deck.AddJoker();
@@ -266,6 +278,11 @@ public class HandManager : MonoBehaviour
         if (selectedCards.Count == 0)
         {
             Debug.Log("No cards selected!");
+            return;
+        }
+        if (rulePlayAmount > 0 && selectedCards.Count != rulePlayAmount)
+        {
+            Debug.Log($"You must play {rulePlayAmount} cards.");
             return;
         }
 
@@ -516,8 +533,7 @@ public class HandManager : MonoBehaviour
                               "Using the rules listed in 'rules', and the cards in your hand, denoted by" +
                               "'playerHand' and the card shown on the discard pile, denoted as 'discardTop'," +
                               "you need to take your go and return the details." +
-                              "For discarded card, give ONLY the number for location of the card for your response." +
-                              "You can play 1 or more number of cards at once, seperate each card played with a /.",
+                              "For discarded card, give ONLY the number for location of the card for your response, with the first card in your hand being '0'.",
                 rules = new GeminiRules
                 {
                     rules = GetActiveRulesForAI() // <-- only active rules
@@ -534,12 +550,39 @@ public class HandManager : MonoBehaviour
             if (geminiAI.latestResponse != null)
             {
                 string AICards = geminiAI.latestResponse.discardReturn;
-                string[] AIHand = geminiAI.latestResponse.updatedHand.ToArray();
+                string[] AIUpdatedHand = geminiAI.latestResponse.updatedHand.ToArray();
+                string[] cardsPlayed = AICards.Split('/');
                 Debug.Log("AI response");
                 Debug.Log("Action = " + AICards);
-                Debug.Log("Hand = " + string.Join(", ", AIHand));
+                Debug.Log("Hand = " + string.Join(", ", AIUpdatedHand));
+                if (rulePlayAmount > 0 && cardsPlayed.Length != rulePlayAmount)
+                {
+                    Debug.LogWarning("AI played wrong number of cards. Fixing...");
+                    if (cardsPlayed.Length > rulePlayAmount) cardsPlayed = cardsPlayed.Take(rulePlayAmount).ToArray();
+                    if (cardsPlayed.Length < rulePlayAmount)
+                    {
+                        HashSet<int> usedIndexes = new HashSet<int>();
+                        foreach (string c in cardsPlayed)
+                        {
+                            if (int.TryParse(c, out int index))
+                                usedIndexes.Add(index);
+                        }
+                        List<int> finalCards = usedIndexes.ToList();
+                        while (finalCards.Count < rulePlayAmount && finalCards.Count < AIHand.Count)
+                        {
+                            int rand = UnityEngine.Random.Range(0, AIHand.Count);
+                            if (!usedIndexes.Contains(rand))
+                            {
+                                usedIndexes.Add(rand);
+                                finalCards.Add(rand);
+                            }
+                        }
+                        cardsPlayed = finalCards.Select(x => x.ToString()).ToArray();
+                    }
+                    AICards = string.Join("/", cardsPlayed);
+                }
                 PlayAICards(AICards);
-                yield return new WaitForSeconds(1.0f);
+                yield return new WaitForSeconds(0.6f * cardsPlayed.Length);
             }
             geminiAI.ResetLatestResponse();
             if (ruleOutofCards && AIHand.Count == 0)
@@ -910,10 +953,10 @@ public class HandManager : MonoBehaviour
             aiRules.Add("Special Rules cards are enabled in the game. Rules cards add a rule to the game when played and are worth 0 points (if points are on).");
 
         if (ruleDrawHand)
-            aiRules.Add("On turn start, you draw cards up to the starting hand amount {ruleStartHand}.");
+            aiRules.Add($"On turn start, you draw cards up to the starting hand amount {ruleStartHand}.");
 
         if (ruleTurnLimit > 0)
-            aiRules.Add("Game will end after turn {ruleTurnLimit}.");
+            aiRules.Add($"Game will end after turn {ruleTurnLimit}.");
 
         if (ruleDeckout)
             aiRules.Add("Game will end when the deck runs out of cards.");
@@ -923,6 +966,11 @@ public class HandManager : MonoBehaviour
 
         if (ruleLeastCardsWin)
             aiRules.Add("Win the game by having the least cards in hand when the game ends.");
+
+        if (rulePlayAmount > 0)
+            aiRules.Add($"You MUST play EXACTLY {rulePlayAmount} cards per turn. Seperate each card played with a '/' (example for 3 cards: 0/2/3 etc).");
+        else
+            aiRules.Add($"You can play any number of cards per turn. Seperate each card played with a '/' (example for 3 cards: 0/2/3 etc).");
 
         return aiRules;
     }
