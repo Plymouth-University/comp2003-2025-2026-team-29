@@ -59,6 +59,9 @@ public class RuleChanger : MonoBehaviour
         if (int.TryParse(value, out int count))
             gameRules.ruleTurnLimit = count;
     }
+
+    // ---- Deckout ----
+    public void ToggleDeckout() => gameRules.ruleDeckout = !gameRules.ruleDeckout;
 }
 
 

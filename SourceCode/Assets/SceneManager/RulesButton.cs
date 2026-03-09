@@ -152,5 +152,11 @@ public class RulesButtonHandler : MonoBehaviour
             Debug.Log($"Input a number.");
         }
     }
+
+    public void EnableDeckOut()
+    {
+        if (gameRules != null) gameRules.ruleDeckout = !gameRules.ruleDeckout;
+        Debug.Log("Deckout enabled: " + gameRules.ruleDeckout);
+    }
 }
 
