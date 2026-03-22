@@ -15,6 +15,8 @@ public class HandManager : MonoBehaviour
     public Transform cardParent;
     public Button endTurnButton;
     public GameObject jokerPanel;
+    public GameObject winPanel;
+    public GameObject losePanel;
     public Image discardTopCardImage;
     public Texture2D[] cardTextures;
     public Dictionary<string, Texture2D> cardTextureDict = new Dictionary<string, Texture2D>();
@@ -167,6 +169,10 @@ public class HandManager : MonoBehaviour
 
         if (jokerPanel != null)
             jokerPanel.SetActive(false); // hide panel initially
+        if (winPanel != null)
+            winPanel.SetActive(false);
+        if (losePanel != null)
+            losePanel.SetActive(false);
     }
 
     // ---- UI Updates ----
@@ -387,7 +393,7 @@ public class HandManager : MonoBehaviour
             yield break;
         }
 
-        string[] Parts = AIIndices.Split('/');
+        string[] Parts = AIIndices.Split('-');
         List<int> AISelectedCards = Parts.Select(s => int.Parse(s)).ToList();
         playedCards.Clear();
         AISelectedCards.Sort();
@@ -545,13 +551,13 @@ public class HandManager : MonoBehaviour
             geminiAI.SendToGemini(req);
             Debug.Log("Button clicked — sending request to Gemini...");
             endTurnButton.interactable = false;
-            yield return new WaitUntil(() => geminiAI.latestResponse != null);
+            yield return new WaitForSeconds(1f);
             Debug.Log(geminiAI.latestResponse);
             if (geminiAI.latestResponse != null)
             {
                 string AICards = geminiAI.latestResponse.discardReturn;
                 string[] AIUpdatedHand = geminiAI.latestResponse.updatedHand.ToArray();
-                string[] cardsPlayed = AICards.Split('/');
+                string[] cardsPlayed = AICards.Split('-');
                 Debug.Log("AI response");
                 Debug.Log("Action = " + AICards);
                 Debug.Log("Hand = " + string.Join(", ", AIUpdatedHand));
@@ -579,7 +585,7 @@ public class HandManager : MonoBehaviour
                         }
                         cardsPlayed = finalCards.Select(x => x.ToString()).ToArray();
                     }
-                    AICards = string.Join("/", cardsPlayed);
+                    AICards = string.Join("-", cardsPlayed);
                 }
                 PlayAICards(AICards);
                 yield return new WaitForSeconds(0.6f * cardsPlayed.Length);
@@ -638,13 +644,22 @@ public class HandManager : MonoBehaviour
     void EndGame()
     {
         Debug.Log($"Game Over!");
+        bool playerWin = false;
         if (rulePointsWin)
         {
-            if (totalPoints > totalAIPoints) Debug.Log($"Player Wins!");
+            if (totalPoints > totalAIPoints)
+            {
+                Debug.Log($"Player Wins!");
+                playerWin = true;
+            }
             else if (totalAIPoints > totalPoints) Debug.Log($"AI Wins!");
             else if (ruleLeastCardsWin)
             {
-                if (playerHand.Count < AIHand.Count) Debug.Log($"Player Wins!");
+                if (playerHand.Count < AIHand.Count)
+                {
+                    Debug.Log($"Player Wins!");
+                    playerWin = true;
+                }
                 else if (playerHand.Count > AIHand.Count) Debug.Log($"AI Wins!");
                 else Debug.Log($"It was a tie!");
             }
@@ -652,17 +667,29 @@ public class HandManager : MonoBehaviour
         }
         else if (ruleLeastCardsWin)
         {
-            if (playerHand.Count > AIHand.Count) Debug.Log($"Player Wins!");
+            if (playerHand.Count > AIHand.Count)
+            {
+                Debug.Log($"Player Wins!");
+                playerWin = true;
+            }
             else if (playerHand.Count < AIHand.Count) Debug.Log($"AI Wins!");
             else Debug.Log($"It was a tie!");
         }
-            endTurnButton.interactable = false;
+        endTurnButton.interactable = false;
         ruleDraw = 0;
         ruleDrawHand = false;
         foreach (Transform child in cardParent)
         {
             Button btn = child.GetComponent<Button>();
             if (btn != null) btn.interactable = false;
+        }
+        if (playerWin == true)
+        {
+            winPanel.SetActive(true);
+        }
+        else
+        {
+            losePanel.SetActive(true);
         }
         gameEnd = true;
     }
@@ -968,9 +995,9 @@ public class HandManager : MonoBehaviour
             aiRules.Add("Win the game by having the least cards in hand when the game ends.");
 
         if (rulePlayAmount > 0)
-            aiRules.Add($"You MUST play EXACTLY {rulePlayAmount} cards per turn. Seperate each card played with a '/' (example for 3 cards: 0/2/3 etc).");
+            aiRules.Add($"You MUST play EXACTLY {rulePlayAmount} cards per turn. Seperate each card played with a '-' (example for 3 cards: 0-2-3 etc).");
         else
-            aiRules.Add($"You can play any number of cards per turn. Seperate each card played with a '/' (example for 3 cards: 0/2/3 etc).");
+            aiRules.Add($"You can play any number of cards per turn. You MUST play at least 1 card. Seperate each card played with a '-' (example for 3 cards: 0-2-3 etc).");
 
         return aiRules;
     }
