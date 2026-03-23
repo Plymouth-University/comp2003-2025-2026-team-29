@@ -17,6 +17,8 @@ public class HandManager : MonoBehaviour
     public GameObject jokerPanel;
     public GameObject winPanel;
     public GameObject losePanel;
+    public TextMeshProUGUI playerPoints;
+    public TextMeshProUGUI AIPoints;
     public Image discardTopCardImage;
     public Texture2D[] cardTextures;
     public Dictionary<string, Texture2D> cardTextureDict = new Dictionary<string, Texture2D>();
@@ -173,6 +175,16 @@ public class HandManager : MonoBehaviour
             winPanel.SetActive(false);
         if (losePanel != null)
             losePanel.SetActive(false);
+        if (!rulePointsEnabled)
+        {
+            playerPoints.text = "";
+            AIPoints.text = "";
+        }
+        else
+        {
+            playerPoints.text = "Player: 0 points";
+            AIPoints.text = "AI: 0 points";
+        }
     }
 
     // ---- UI Updates ----
@@ -503,11 +515,13 @@ public class HandManager : MonoBehaviour
             if (isAITurn)
             {
                 totalAIPoints += turnPoints;
+                AIPoints.text = $"AI: {totalAIPoints} points";
                 Debug.Log($"Turn points: {turnPoints}, AI Total points: {totalAIPoints}");
             }
             else
             {
                 totalPoints += turnPoints;
+                playerPoints.text = $"Player: {totalPoints} points";
                 Debug.Log($"Turn points: {turnPoints}, Total points: {totalPoints}");
             }
             UpdateDiscardTopCard();
@@ -587,6 +601,37 @@ public class HandManager : MonoBehaviour
                     }
                     AICards = string.Join("-", cardsPlayed);
                 }
+                PlayAICards(AICards);
+                yield return new WaitForSeconds(0.6f * cardsPlayed.Length);
+            }
+            else
+            {
+                string AICards;
+                string[] AIUpdatedHand;
+                string[] cardsPlayed;
+                int playAmount;
+                if (rulePlayAmount > 1)
+                {
+                    playAmount = rulePlayAmount;
+                }
+                else
+                {
+                    playAmount = 1;
+                }
+                Debug.LogWarning("AI error. Fixing.");
+                HashSet<int> usedIndexes = new HashSet<int>();
+                List<int> finalCards = usedIndexes.ToList();
+                while (finalCards.Count < playAmount && finalCards.Count < AIHand.Count)
+                {
+                    int rand = UnityEngine.Random.Range(0, AIHand.Count);
+                    if (!usedIndexes.Contains(rand))
+                    {
+                        usedIndexes.Add(rand);
+                        finalCards.Add(rand);
+                    }
+                }
+                cardsPlayed = finalCards.Select(x => x.ToString()).ToArray();
+                AICards = string.Join("-", cardsPlayed);
                 PlayAICards(AICards);
                 yield return new WaitForSeconds(0.6f * cardsPlayed.Length);
             }
