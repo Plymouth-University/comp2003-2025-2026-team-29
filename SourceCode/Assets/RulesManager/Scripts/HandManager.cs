@@ -66,6 +66,13 @@ public class HandManager : MonoBehaviour
 
     // ---- AI ----
     public UnityGeminiCardAI geminiAI;
+    [Header("Turn Messages")]
+    public TMP_Text turnMessageText;
+
+    private string currentGameId;
+    private const int aiMaxAttempts = 3;
+    private const float aiResponseTimeoutSeconds = 15f;
+    private const float aiRetryDelaySeconds = 0.75f;
 
     void Start()
     {
@@ -86,10 +93,12 @@ public class HandManager : MonoBehaviour
         ruleOutofCards = gameRules.ruleOutofCards;
         ruleLeastCardsWin = gameRules.ruleLeastCardsWin;
         rulePlayAmount = gameRules.rulePlayAmount;
+        currentGameId = CreateUniqueGameId();
+
         rules = new List<Rule> {
             new Rule { Name = "Starting hand size", Enabled = ruleStartHand != 5, OnEnable = () =>
                 {
-                    ruleStartHand = UnityEngine.Random.Range(1, 10); // random 1–10 cards
+                    ruleStartHand = UnityEngine.Random.Range(1, 10); // random 1Â–10 cards
                     Debug.Log($"Starting hand size set to {ruleStartHand}");
                 }
             },
@@ -99,7 +108,7 @@ public class HandManager : MonoBehaviour
                 Enabled = ruleDraw > 0,
                 OnEnable = () =>
                 {
-                    ruleDraw = UnityEngine.Random.Range(1, 5); // set draw to random 1–5
+                    ruleDraw = UnityEngine.Random.Range(1, 5); // set draw to random 1Â–5
                     Debug.Log($"Draw each turn set to {ruleDraw}");
                 }
             },
@@ -121,7 +130,7 @@ public class HandManager : MonoBehaviour
                 Enabled = ruleMaxHand > 0,
                 OnEnable = () =>
                 {
-                    ruleMaxHand = UnityEngine.Random.Range(1, 8); // set max to random 1–8
+                    ruleMaxHand = UnityEngine.Random.Range(1, 8); // set max to random 1Â–8
                     Debug.Log($"Max hand size set to {ruleMaxHand}");
                 }
             },
@@ -135,7 +144,7 @@ public class HandManager : MonoBehaviour
                 Enabled = ruleTurnLimit > 0,
                 OnEnable = () =>
                 {
-                    ruleTurnLimit = UnityEngine.Random.Range(turn + 3, turn + 8); // set limit to random 3–8 from current turn
+                    ruleTurnLimit = UnityEngine.Random.Range(turn + 3, turn + 8); // set limit to random 3Â–8 from current turn
                     Debug.Log($"Turn limit set to turn {ruleTurnLimit}");
                 }
             },
@@ -148,7 +157,7 @@ public class HandManager : MonoBehaviour
                 Enabled = rulePlayAmount > 0,
                 OnEnable = () =>
                 {
-                    rulePlayAmount = UnityEngine.Random.Range(1, 3); // set amount to random 1–3
+                    rulePlayAmount = UnityEngine.Random.Range(1, 3); // set amount to random 1Â–3
                     Debug.Log($"Card play max set to {rulePlayAmount}");
                 }
             }
@@ -185,6 +194,8 @@ public class HandManager : MonoBehaviour
             playerPoints.text = "Player: 0 points";
             AIPoints.text = "AI: 0 points";
         }
+
+        StartCoroutine(PrimeAIOnStartup());
     }
 
     // ---- UI Updates ----
@@ -287,7 +298,7 @@ public class HandManager : MonoBehaviour
         jokerValues[jokerCard] = value;
         currentJokerIndex = -1;
         jokerPanel.SetActive(false);
-        PlaySelectedCards();
+        StartCoroutine(ValidateAndPlayPlayerTurn());
     }
 
     // ---- End button pressed ----
@@ -314,7 +325,7 @@ public class HandManager : MonoBehaviour
             jokerPanel.SetActive(true);
             return; // Wait for Joker value
         }
-        PlaySelectedCards();
+        StartCoroutine(ValidateAndPlayPlayerTurn());
     }
 
     // ---- Playing cards ----
@@ -537,119 +548,355 @@ public class HandManager : MonoBehaviour
     System.Collections.IEnumerator AITurn()
     {
         yield return new WaitForSeconds(0.5f);
+
         if (turn != 0)
         {
             if ((ruleDrawHand) && (ruleStartHand - AIHand.Count) > 0) DrawAICards(ruleStartHand - AIHand.Count);
             DrawAICards(ruleDraw);
             yield return new WaitForSeconds(0.5f * ruleDraw);
         }
-        if (!gameEnd)
+
+        if (gameEnd)
+            yield break;
+
+        endTurnButton.interactable = false;
+
+        GeminiRequest req = BuildAITurnRequest();
+        GeminiResponse aiMoveResponse = null;
+        yield return StartCoroutine(SendAIRequestWithRetry(req, aiMaxAttempts, response => aiMoveResponse = response));
+
+        string aiCardsToPlay = null;
+        List<int> aiIndices = new List<int>();
+
+        if (aiMoveResponse != null && TryParseCardIndices(aiMoveResponse.discardReturn, AIHand.Count, out aiIndices))
         {
-            GeminiRequest req = new GeminiRequest
+            GeminiResponse aiValidationResponse = null;
+            yield return StartCoroutine(ValidateMoveWithAI(false, AIHand, aiIndices, "AI", response => aiValidationResponse = response));
+
+            if (IsValidationSuccessful(aiValidationResponse, out string validationMessage))
             {
-                gameId = "GAME-001",
-                instruction = "You are a player in a card game." +
-                              "The gameId is an identifier for the game." +
-                              "Using the rules listed in 'rules', and the cards in your hand, denoted by" +
-                              "'playerHand' and the card shown on the discard pile, denoted as 'discardTop'," +
-                              "you need to take your go and return the details." +
-                              "For discarded card, give ONLY the number for location of the card for your response, with the first card in your hand being '0'.",
-                rules = new GeminiRules
-                {
-                    rules = GetActiveRulesForAI() // <-- only active rules
-                },
-                playerHand = AIHand.Select(c => c.ToString()).ToList(),
-                discardTop = deck.DiscardCount > 0 ? deck.PeekDiscard().ToString() : "",
-                stack = new List<string>()
-            };
-            geminiAI.SendToGemini(req);
-            Debug.Log("Button clicked — sending request to Gemini...");
-            endTurnButton.interactable = false;
-            yield return new WaitForSeconds(1f);
-            Debug.Log(geminiAI.latestResponse);
-            if (geminiAI.latestResponse != null)
-            {
-                string AICards = geminiAI.latestResponse.discardReturn;
-                string[] AIUpdatedHand = geminiAI.latestResponse.updatedHand.ToArray();
-                string[] cardsPlayed = AICards.Split('-');
-                Debug.Log("AI response");
-                Debug.Log("Action = " + AICards);
-                Debug.Log("Hand = " + string.Join(", ", AIUpdatedHand));
-                if (rulePlayAmount > 0 && cardsPlayed.Length != rulePlayAmount)
-                {
-                    Debug.LogWarning("AI played wrong number of cards. Fixing...");
-                    if (cardsPlayed.Length > rulePlayAmount) cardsPlayed = cardsPlayed.Take(rulePlayAmount).ToArray();
-                    if (cardsPlayed.Length < rulePlayAmount)
-                    {
-                        HashSet<int> usedIndexes = new HashSet<int>();
-                        foreach (string c in cardsPlayed)
-                        {
-                            if (int.TryParse(c, out int index))
-                                usedIndexes.Add(index);
-                        }
-                        List<int> finalCards = usedIndexes.ToList();
-                        while (finalCards.Count < rulePlayAmount && finalCards.Count < AIHand.Count)
-                        {
-                            int rand = UnityEngine.Random.Range(0, AIHand.Count);
-                            if (!usedIndexes.Contains(rand))
-                            {
-                                usedIndexes.Add(rand);
-                                finalCards.Add(rand);
-                            }
-                        }
-                        cardsPlayed = finalCards.Select(x => x.ToString()).ToArray();
-                    }
-                    AICards = string.Join("-", cardsPlayed);
-                }
-                PlayAICards(AICards);
-                yield return new WaitForSeconds(0.6f * cardsPlayed.Length);
+                aiCardsToPlay = BuildIndicesString(aiIndices);
+                Debug.Log("AI response accepted: " + aiCardsToPlay);
             }
             else
             {
-                string AICards;
-                string[] AIUpdatedHand;
-                string[] cardsPlayed;
-                int playAmount;
-                if (rulePlayAmount > 1)
-                {
-                    playAmount = rulePlayAmount;
-                }
-                else
-                {
-                    playAmount = 1;
-                }
-                Debug.LogWarning("AI error. Fixing.");
-                HashSet<int> usedIndexes = new HashSet<int>();
-                List<int> finalCards = usedIndexes.ToList();
-                while (finalCards.Count < playAmount && finalCards.Count < AIHand.Count)
-                {
-                    int rand = UnityEngine.Random.Range(0, AIHand.Count);
-                    if (!usedIndexes.Contains(rand))
-                    {
-                        usedIndexes.Add(rand);
-                        finalCards.Add(rand);
-                    }
-                }
-                cardsPlayed = finalCards.Select(x => x.ToString()).ToArray();
-                AICards = string.Join("-", cardsPlayed);
-                PlayAICards(AICards);
-                yield return new WaitForSeconds(0.6f * cardsPlayed.Length);
-            }
-            geminiAI.ResetLatestResponse();
-            if (ruleOutofCards && AIHand.Count == 0)
-                EndGame();
-            turn += 1;
-            UpdateHandUI();
-            if (turn != 0 && !gameEnd)
-            {
-                {
-                    if ((ruleDrawHand) && (ruleStartHand - playerHand.Count) > 0) DrawCards(ruleStartHand - playerHand.Count);
-                    DrawCards(ruleDraw);
-                }
-                selectedCards.Clear();
-                endTurnButton.interactable = true;
+                Debug.LogWarning("AI move failed validation: " + validationMessage);
             }
         }
+
+        if (string.IsNullOrWhiteSpace(aiCardsToPlay))
+        {
+            Debug.LogWarning("AI error or invalid move. Falling back to random valid card selection.");
+            aiCardsToPlay = BuildFallbackAICards();
+        }
+
+        PlayAICards(aiCardsToPlay);
+
+        int playedCount = string.IsNullOrWhiteSpace(aiCardsToPlay) ? 0 : aiCardsToPlay.Split('-').Length;
+        yield return new WaitForSeconds(0.6f * playedCount);
+
+        if (ruleOutofCards && AIHand.Count == 0)
+            EndGame();
+
+        turn += 1;
+        UpdateHandUI();
+
+        if (turn != 0 && !gameEnd)
+        {
+            if ((ruleDrawHand) && (ruleStartHand - playerHand.Count) > 0) DrawCards(ruleStartHand - playerHand.Count);
+            DrawCards(ruleDraw);
+            selectedCards.Clear();
+            endTurnButton.interactable = true;
+        }
+    }
+
+
+    private IEnumerator PrimeAIOnStartup()
+    {
+        if (geminiAI == null)
+        {
+            Debug.LogWarning("Gemini AI reference is missing. Startup priming skipped.");
+            yield break;
+        }
+
+        GeminiRequest primeRequest = new GeminiRequest
+        {
+            gameId = currentGameId,
+            instruction = "Startup connectivity check only. Respond with JSON only. Set action to PRIME_OK, discardReturn to READY, and updatedHand to an empty array.",
+            rules = new GeminiRules
+            {
+                rules = new List<string> { "This is a warmup request. Do not take a turn." }
+            },
+            playerHand = new List<string>(),
+            discardTop = "",
+            stack = new List<string>()
+        };
+
+        GeminiResponse primeResponse = null;
+        yield return StartCoroutine(SendAIRequestWithRetry(primeRequest, 1, response => primeResponse = response));
+
+        if (primeResponse != null)
+        {
+            Debug.Log("AI startup prime successful.");
+        }
+        else
+        {
+            Debug.LogWarning("AI startup prime failed. Gameplay will still continue and retry later.");
+        }
+    }
+
+    private string CreateUniqueGameId()
+    {
+        return "Game" + DateTime.Now.ToString("yyyyMMdd_HHmmssfff");
+    }
+
+    private GeminiRequest BuildAITurnRequest()
+    {
+        List<string> aiRules = GetActiveRulesForAI();
+        aiRules.Add("IMPORTANT RESPONSE FORMAT: discardReturn may contain MULTIPLE card indexes.");
+        aiRules.Add("If you want to play more than one card, return all chosen indexes separated with '-' such as 0-2 or 1-3-4.");
+        aiRules.Add(rulePlayAmount > 0
+            ? $"You must return exactly {rulePlayAmount} indexes in discardReturn."
+            : "You may return one or more indexes in discardReturn. Prefer a valid multi-card play when that is sensible under the current rules.");
+        aiRules.Add("updatedHand should list the hand after removing every played card, not just one card.");
+
+        return new GeminiRequest
+        {
+            gameId = currentGameId,
+            instruction = "You are a player in a card game. The gameId uniquely identifies the current match. Using the rules listed in rules, the cards in your hand in playerHand, and the top discard in discardTop, choose your move. Return ONLY JSON. For discardReturn, return the card index or indexes from your current hand, separated with '-' and starting from 0. Examples: 2 or 0-2 or 1-3-4. If multiple cards are played, include ALL played card indexes in discardReturn.",
+            rules = new GeminiRules
+            {
+                rules = aiRules
+            },
+            playerHand = AIHand.Select(c => c.ToString()).ToList(),
+            discardTop = deck.DiscardCount > 0 ? deck.PeekDiscard().ToString() : "",
+            stack = new List<string>()
+        };
+    }
+
+    private IEnumerator ValidateAndPlayPlayerTurn()
+    {
+        if (gameEnd || isAITurn)
+            yield break;
+
+        endTurnButton.interactable = false;
+
+        GeminiResponse validationResponse = null;
+        yield return StartCoroutine(ValidateMoveWithAI(true, playerHand, selectedCards.OrderBy(i => i).ToList(), "Player", response => validationResponse = response));
+
+        if (!IsValidationSuccessful(validationResponse, out string validationMessage))
+        {
+            string message = string.IsNullOrWhiteSpace(validationMessage)
+                ? "Invalid move. Please take your go again."
+                : "Invalid move: " + validationMessage + " Please take your go again.";
+
+            ShowTurnMessage(message);
+            Debug.LogWarning(message);
+            endTurnButton.interactable = true;
+            yield break;
+        }
+
+        ShowTurnMessage(string.Empty);
+        PlaySelectedCards();
+    }
+
+    private IEnumerator ValidateMoveWithAI(bool isPlayerMove, List<Card> hand, List<int> indices, string actorName, Action<GeminiResponse> onComplete)
+    {
+        if (geminiAI == null)
+        {
+            Debug.LogWarning("Gemini AI reference is missing. Treating move as valid because no validator is available.");
+            onComplete?.Invoke(new GeminiResponse { action = "VALID", discardReturn = "No validator attached.", updatedHand = new List<string>() });
+            yield break;
+        }
+
+        List<string> selectedCardDescriptions = indices
+            .Where(idx => idx >= 0 && idx < hand.Count)
+            .Select(idx => DescribeCardForValidation(hand[idx], idx))
+            .ToList();
+
+        GeminiRequest validationRequest = new GeminiRequest
+        {
+            gameId = currentGameId,
+            instruction = actorName + " intends to play these card indexes: " + BuildIndicesString(indices) + ". " +
+                          "The selected cards are: " + string.Join(", ", selectedCardDescriptions) + ". " +
+                          "Validate ONLY whether this move follows the active rules. Return ONLY JSON. " +
+                          "Set action to VALID or INVALID. Put a short reason in discardReturn. Leave updatedHand empty.",
+            rules = new GeminiRules
+            {
+                rules = GetValidationRulesForAI(isPlayerMove, hand.Count)
+            },
+            playerHand = hand.Select(c => c.ToString()).ToList(),
+            discardTop = deck.DiscardCount > 0 ? deck.PeekDiscard().ToString() : "",
+            stack = new List<string>()
+        };
+
+        yield return StartCoroutine(SendAIRequestWithRetry(validationRequest, aiMaxAttempts, onComplete));
+    }
+
+    private IEnumerator SendAIRequestWithRetry(GeminiRequest req, int maxAttempts, Action<GeminiResponse> onComplete)
+    {
+        if (geminiAI == null)
+        {
+            Debug.LogWarning("Gemini AI reference is missing.");
+            onComplete?.Invoke(null);
+            yield break;
+        }
+
+        GeminiResponse finalResponse = null;
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            geminiAI.ResetLatestResponse();
+            geminiAI.SendToGemini(CloneGeminiRequest(req));
+
+            float elapsed = 0f;
+            while (elapsed < aiResponseTimeoutSeconds)
+            {
+                if (geminiAI.latestResponse != null && !string.IsNullOrWhiteSpace(geminiAI.latestResponse.action))
+                {
+                    finalResponse = geminiAI.latestResponse;
+                    break;
+                }
+
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+
+            if (finalResponse != null)
+            {
+                break;
+            }
+
+            Debug.LogWarning($"AI request attempt {attempt} of {maxAttempts} failed or timed out.");
+
+            if (attempt < maxAttempts)
+                yield return new WaitForSeconds(aiRetryDelaySeconds);
+        }
+
+        geminiAI.ResetLatestResponse();
+        onComplete?.Invoke(finalResponse);
+    }
+
+    private GeminiRequest CloneGeminiRequest(GeminiRequest req)
+    {
+        return new GeminiRequest
+        {
+            gameId = req.gameId,
+            instruction = req.instruction,
+            rules = new GeminiRules
+            {
+                rules = req.rules != null && req.rules.rules != null ? new List<string>(req.rules.rules) : new List<string>()
+            },
+            playerHand = req.playerHand != null ? new List<string>(req.playerHand) : new List<string>(),
+            discardTop = req.discardTop,
+            stack = req.stack != null ? new List<string>(req.stack) : new List<string>()
+        };
+    }
+
+    private bool IsValidationSuccessful(GeminiResponse validationResponse, out string message)
+    {
+        message = validationResponse != null ? validationResponse.discardReturn : "No validation response received.";
+        if (validationResponse == null || string.IsNullOrWhiteSpace(validationResponse.action))
+            return false;
+
+        string action = validationResponse.action.Trim().ToUpperInvariant();
+        return action == "VALID" || action == "OK" || action == "PASS";
+    }
+
+    private string DescribeCardForValidation(Card card, int index)
+    {
+        string description = "[" + index + "] " + card;
+        if ((card.Rank == Rank.Joker || card.Rank == Rank.Joker2) && jokerValues.TryGetValue(card, out int jokerValue))
+            description += $" with declared joker value {jokerValue}";
+        return description;
+    }
+
+    private List<string> GetValidationRulesForAI(bool isPlayerMove, int handCount)
+    {
+        List<string> validationRules = new List<string>(GetActiveRulesForAI());
+
+        validationRules.Add($"This is a move validation request for the {(isPlayerMove ? "human player" : "AI player")}.");
+        validationRules.Add($"Current hand size before the move is {handCount}.");
+        validationRules.Add("A move is INVALID if any selected card index does not exist in the current hand.");
+        validationRules.Add("A move is INVALID if no cards are selected.");
+        validationRules.Add("If a fixed card play amount rule is active, the number of selected cards must match it exactly.");
+        validationRules.Add("If jokers are selected, they must already have a declared value.");
+        validationRules.Add("Ignore future draw actions. Only validate the cards being played right now.");
+
+        return validationRules;
+    }
+
+    private bool TryParseCardIndices(string value, int handCount, out List<int> indices)
+    {
+        indices = new List<int>();
+
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        string[] parts = value.Split('-');
+        foreach (string part in parts)
+        {
+            if (!int.TryParse(part.Trim(), out int index))
+                return false;
+
+            if (index < 0 || index >= handCount)
+                return false;
+
+            if (indices.Contains(index))
+                return false;
+
+            indices.Add(index);
+        }
+
+        if (indices.Count == 0)
+            return false;
+
+        if (rulePlayAmount > 0 && indices.Count != rulePlayAmount)
+            return false;
+
+        return true;
+    }
+
+    private string BuildIndicesString(IEnumerable<int> indices)
+    {
+        return string.Join("-", indices);
+    }
+
+    private string BuildFallbackAICards()
+    {
+        if (AIHand.Count == 0)
+            return string.Empty;
+
+        int playAmount;
+        if (rulePlayAmount > 0)
+        {
+            playAmount = Mathf.Min(rulePlayAmount, AIHand.Count);
+        }
+        else
+        {
+            // When there is no fixed play limit, allow the fallback to choose multiple cards too.
+            playAmount = UnityEngine.Random.Range(1, AIHand.Count + 1);
+        }
+
+        List<int> fallback = new List<int>();
+
+        while (fallback.Count < playAmount)
+        {
+            int candidate = UnityEngine.Random.Range(0, AIHand.Count);
+            if (!fallback.Contains(candidate))
+                fallback.Add(candidate);
+        }
+
+        fallback.Sort();
+        return BuildIndicesString(fallback);
+    }
+
+    private void ShowTurnMessage(string message)
+    {
+        if (turnMessageText != null)
+            turnMessageText.text = message;
+        else if (geminiAI != null && geminiAI.uiText != null)
+            geminiAI.uiText.text = message;
     }
 
     // ---- Displaying top of discard ----
