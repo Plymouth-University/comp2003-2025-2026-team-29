@@ -5,7 +5,6 @@ using UnityEngine.UI;
 public class RulesButtonHandler : MonoBehaviour
 {
     public GameRulesSO gameRules; // reference to the object that carries your rules
-    public TMP_InputField pointsInputField; // input field where user types the points
 
     public Button jokerButton;
     public Button reshuffleButton;
