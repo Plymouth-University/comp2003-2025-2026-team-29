@@ -29,6 +29,12 @@ public class HandManager : MonoBehaviour
     public Animator deckShuffler;
     public Animator cardShuffler;
 
+    // ---- Audio ----
+    public AudioSource audioSource;
+    public AudioClip Swish;
+    public AudioClip Shuffle;
+    public AudioClip Win;
+    public AudioClip Lose;
 
     // ---- Game Logic ----
     public Deck deck;
@@ -386,6 +392,8 @@ public class HandManager : MonoBehaviour
                 }
                 // Wait for a short time before spawning the next card
                 yield return new WaitForSeconds(0.2f);
+                audioSource.clip = Swish;
+                audioSource.Play();
                 Destroy(visualCard, 1.0f); // destroy after animation finishes
             }
             UpdateHandUI();
@@ -397,7 +405,7 @@ public class HandManager : MonoBehaviour
         UpdateDiscardTopCard();
         UpdateHandUI();
 
-        if (ruleOutofCards && playerHand.Count == 0) EndGame();
+        if (ruleOutofCards && playerHand.Count == 0 && !rulePointsEnabled) EndGame();
 
         FinishTurn();
     }
@@ -471,6 +479,8 @@ public class HandManager : MonoBehaviour
                     }
                     // Wait for a short time before spawning the next card
                     yield return new WaitForSeconds(0.5f);
+                    audioSource.clip = Swish;
+                    audioSource.Play();
                     Destroy(visualCard, 2.2f);
                 }
                 UpdateHandUI();
@@ -540,6 +550,8 @@ public class HandManager : MonoBehaviour
             if (rulePointsEnd && (totalPoints >= pointEndLimit || totalAIPoints >= pointEndLimit)) EndGame();
 
             if (ruleTurnLimit != 0 && turn >= ruleTurnLimit - 1 && isAITurn) EndGame();
+
+            if (ruleOutofCards && playerHand.Count == 0) EndGame();
         }
         if (!isAITurn) StartCoroutine(AITurn());
         isAITurn = false;
@@ -978,10 +990,14 @@ public class HandManager : MonoBehaviour
         if (playerWin == true)
         {
             winPanel.SetActive(true);
+            audioSource.clip = Win;
+            audioSource.Play();
         }
         else
         {
             losePanel.SetActive(true);
+            audioSource.clip = Lose;
+            audioSource.Play();
         }
         gameEnd = true;
     }
@@ -1061,6 +1077,8 @@ public class HandManager : MonoBehaviour
                         Destroy(visualCard, 1.0f);
                     }
                     yield return new WaitForSeconds(0.2f);
+                    audioSource.clip = Swish;
+                    audioSource.Play();
                     UpdateHandUI();
                 }
             }
@@ -1122,6 +1140,8 @@ public class HandManager : MonoBehaviour
                         Destroy(visualCard, 1.0f);
                     }
                     yield return new WaitForSeconds(0.2f);
+                    audioSource.clip = Swish;
+                    audioSource.Play();
                 }
             }
         }
@@ -1209,6 +1229,9 @@ public class HandManager : MonoBehaviour
 
         if (deckShuffler != null) deckShuffler.SetTrigger("deckShuffle");
         if (cardShuffler != null) cardShuffler.SetTrigger("cardShuffle");
+
+        audioSource.clip = Shuffle;
+        audioSource.Play();
 
         yield return new WaitForSeconds(4.0f); // Wait for animation duration
 
