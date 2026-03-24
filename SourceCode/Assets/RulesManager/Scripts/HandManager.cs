@@ -258,7 +258,6 @@ public class HandManager : MonoBehaviour
         }
         for (int i = 0; i < AIHand.Count; i++)
         {
-
             GameObject AICardButton = Instantiate(cardPrefab, cardParent);
 
             Image img = AICardButton.GetComponent<Image>();
@@ -273,6 +272,10 @@ public class HandManager : MonoBehaviour
 
             Button btn = AICardButton.GetComponent<Button>();
             btn.interactable = false;
+            CanvasGroup cg = AICardButton.GetComponent<CanvasGroup>();
+            if (cg == null)
+                cg = AICardButton.AddComponent<CanvasGroup>();
+            cg.blocksRaycasts = false;
 
             int AIindex = i;
         }
@@ -675,7 +678,7 @@ public class HandManager : MonoBehaviour
         return new GeminiRequest
         {
             gameId = currentGameId,
-            instruction = "You are a player in a card game. The gameId uniquely identifies the current match. Using the rules listed in rules, the cards in your hand in playerHand, and the top discard in discardTop, choose your move. Return ONLY JSON. For discardReturn, return the card index or indexes from your current hand, separated with '-' and starting from 0. Examples: 2 or 0-2 or 1-3-4. If multiple cards are played, include ALL played card indexes in discardReturn.",
+            instruction = "You are a player in a card game. Your goal is to play as well as possible to win the game. The gameId uniquely identifies the current match. Using the rules listed in rules, the cards in your hand in playerHand, and the top discard in discardTop, choose your move. Return ONLY JSON. For discardReturn, return the card index or indexes from your current hand, separated with '-' and starting from 0. Examples: 2 or 0-2 or 1-3-4. If multiple cards are played, include ALL played card indexes in discardReturn.",
             rules = new GeminiRules
             {
                 rules = aiRules
