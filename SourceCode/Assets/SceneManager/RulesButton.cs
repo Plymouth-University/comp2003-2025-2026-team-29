@@ -21,11 +21,13 @@ public class RulesButtonHandler : MonoBehaviour
     public TMP_InputField drawButton;
     public TMP_InputField maxHandButton;
     public TMP_InputField playLimitButton;
+    public TextMeshProUGUI descriptionText;
 
     // This will be called by a button
     public void SetEndGameByPoints(string points)
     {
         int number;
+        descriptionText.text = "The game will end when someone reaches the inputted amount of points. Requires points to be enabled.";
         if (gameRules == null)
         {
             Debug.LogError("GameRules reference not set!");
@@ -58,6 +60,7 @@ public class RulesButtonHandler : MonoBehaviour
     public void SetStartingHand(string value)
     {
         int number;
+        descriptionText.text = "Players will start the game with the inputted amount of cards in their hand.";
         if (int.TryParse(value, out number))
         {
             if (number > 0)
@@ -81,6 +84,7 @@ public class RulesButtonHandler : MonoBehaviour
     public void SetDrawPerTurn(string value)
     {
         int number;
+        descriptionText.text = "Players will draw the inputted amount of cards at the start of each turn except the first.";
         if (int.TryParse(value, out number))
         {
             if (number >= 0)
@@ -105,6 +109,7 @@ public class RulesButtonHandler : MonoBehaviour
     public void SetMaxHand(string value)
     {
         int number;
+        descriptionText.text = "The number of cards in the players hand cannot exceed the inputted amount.";
         if (int.TryParse(value, out number))
         {
             if (number >= 0)
@@ -127,6 +132,7 @@ public class RulesButtonHandler : MonoBehaviour
 
     public void EnablePoints()
     {
+        descriptionText.text = "Adds points to the game. You will gain points equal to the value of the played cards.";
         if (gameRules != null)
         {
             gameRules.rulePointsEnabled = !gameRules.rulePointsEnabled;
@@ -137,6 +143,7 @@ public class RulesButtonHandler : MonoBehaviour
 
     public void EnableWinByPoints()
     {
+        descriptionText.text = "The player with the most points at the end of the game will win. Requires points to be enabled.";
         if (gameRules != null)
         {
             gameRules.rulePointsWin = !gameRules.rulePointsWin;
@@ -147,6 +154,7 @@ public class RulesButtonHandler : MonoBehaviour
 
     public void EnableReshuffle()
     {
+        descriptionText.text = "The deck will reshuffle discarded cards when it is empty.";
         if (gameRules != null)
         {
             gameRules.ruleReshuffle = !gameRules.ruleReshuffle;
@@ -157,6 +165,7 @@ public class RulesButtonHandler : MonoBehaviour
 
     public void EnableJokers()
     {
+        descriptionText.text = "Adds 2 joker cards to the deck. Joker cards are wild cards and can count as any card.";
         if (gameRules != null)
         {
             gameRules.ruleJoker = !gameRules.ruleJoker;
@@ -167,6 +176,7 @@ public class RulesButtonHandler : MonoBehaviour
 
     public void EnableRulesCard()
     {
+        descriptionText.text = "Adds the rules card to the deck. The rules card adds a random rule to the game when played.";
         if (gameRules != null)
         {
             gameRules.rulesCard = !gameRules.rulesCard;
@@ -177,6 +187,7 @@ public class RulesButtonHandler : MonoBehaviour
 
     public void EnableDrawHand()
     {
+        descriptionText.text = "Players will draw cards up to the starting hand (default 5) at the start of each turn.";
         if (gameRules != null)
         {
             gameRules.ruleDrawHand = !gameRules.ruleDrawHand;
@@ -188,6 +199,7 @@ public class RulesButtonHandler : MonoBehaviour
     public void SetTurnLimit(string value)
     {
         int number;
+        descriptionText.text = "The game will end after the set amount of turns.";
         if (int.TryParse(value, out number))
         {
             if (number >= 0)
@@ -211,6 +223,7 @@ public class RulesButtonHandler : MonoBehaviour
 
     public void EnableDeckOut()
     {
+        descriptionText.text = "The game will end when the deck runs out of cards.";
         if (gameRules != null)
         {
             gameRules.ruleDeckout = !gameRules.ruleDeckout;
@@ -221,6 +234,7 @@ public class RulesButtonHandler : MonoBehaviour
 
     public void EnableOutofCards()
     {
+        descriptionText.text = "The game will end when a player runs out of cards in their hand.";
         if (gameRules != null)
         {
             gameRules.ruleOutofCards = !gameRules.ruleOutofCards;
@@ -231,6 +245,7 @@ public class RulesButtonHandler : MonoBehaviour
 
     public void EnableLeastCards()
     {
+        descriptionText.text = "The player with the least cards in their hand at the end of the game will win.";
         if (gameRules != null)
         {
             gameRules.ruleLeastCardsWin = !gameRules.ruleLeastCardsWin;
@@ -242,6 +257,7 @@ public class RulesButtonHandler : MonoBehaviour
     public void SetPlayAmount(string value)
     {
         int number;
+        descriptionText.text = "Players must play the set amount of cards each turn.";
         if (int.TryParse(value, out number))
         {
             if (number >= 0)
@@ -295,7 +311,7 @@ public class RulesButtonHandler : MonoBehaviour
         SetButtonColor(leastCardButton, gameRules.ruleLeastCardsWin);
         SetButtonColor(deckoutButton, gameRules.ruleDeckout);
 
-        // Input fields (based on values)
+        // Input fields
         SetInputFieldColor(pointsEndButton, gameRules.rulePointsEnd);
         SetInputFieldColor(startHandButton, gameRules.ruleStartHand != 5);
         SetInputFieldColor(turnLimitButton, gameRules.ruleTurnLimit > 0);
