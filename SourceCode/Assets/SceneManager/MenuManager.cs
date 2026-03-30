@@ -6,6 +6,7 @@ public class MenuManager : MonoBehaviour
     public GameObject mainMenu;
     public GameObject playMenu;
     public GameObject rulesMenu;
+    public GameObject presetsMenu;
     public GameObject optionsMenu;
 
     void Start()
@@ -18,6 +19,7 @@ public class MenuManager : MonoBehaviour
         mainMenu.SetActive(true);
         playMenu.SetActive(false);
         rulesMenu.SetActive(false);
+        presetsMenu.SetActive(false);
         optionsMenu.SetActive(false);
     }
 
@@ -26,6 +28,7 @@ public class MenuManager : MonoBehaviour
         mainMenu.SetActive(false);
         playMenu.SetActive(true);
         rulesMenu.SetActive(false);
+        presetsMenu.SetActive(false);
         optionsMenu.SetActive(false);
     }
 
@@ -34,6 +37,16 @@ public class MenuManager : MonoBehaviour
         mainMenu.SetActive(false);
         playMenu.SetActive(false);
         rulesMenu.SetActive(true);
+        presetsMenu.SetActive(false);
+        optionsMenu.SetActive(false);
+    }
+
+    public void ShowPresetsMenu()
+    {
+        mainMenu.SetActive(false);
+        playMenu.SetActive(false);
+        rulesMenu.SetActive(false);
+        presetsMenu.SetActive(true);
         optionsMenu.SetActive(false);
     }
 
@@ -42,6 +55,7 @@ public class MenuManager : MonoBehaviour
         mainMenu.SetActive(false);
         playMenu.SetActive(false);
         rulesMenu.SetActive(false);
+        presetsMenu.SetActive(false);
         optionsMenu.SetActive(true);
     }
 }

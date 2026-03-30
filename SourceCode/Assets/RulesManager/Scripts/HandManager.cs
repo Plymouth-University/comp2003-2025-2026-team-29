@@ -336,6 +336,8 @@ public class HandManager : MonoBehaviour
         else if (selectedCards.Count == 0 && ruleDrawEarlyEnd > 0)
         {
             DrawCards(ruleDrawEarlyEnd);
+            FinishTurn();
+            return;
         }
         if (rulePlayAmount > 0 && selectedCards.Count != rulePlayAmount)
         {
@@ -460,6 +462,10 @@ public class HandManager : MonoBehaviour
         else if (string.IsNullOrEmpty(AIIndices) && ruleDrawEarlyEnd > 0)
         {
             DrawAICards(ruleDrawEarlyEnd);
+            UpdateHandUI();
+            isAITurn = true;
+            FinishTurn();
+            yield break;
         }
         string[] Parts = AIIndices.Split('-');
         List<int> AISelectedCards = Parts.Select(s => int.Parse(s)).ToList();
@@ -1008,12 +1014,12 @@ public class HandManager : MonoBehaviour
         }
         else if (ruleLeastCardsWin)
         {
-            if (playerHand.Count > AIHand.Count)
+            if (playerHand.Count < AIHand.Count)
             {
                 Debug.Log($"Player Wins!");
                 playerWin = true;
             }
-            else if (playerHand.Count < AIHand.Count) Debug.Log($"AI Wins!");
+            else if (playerHand.Count > AIHand.Count) Debug.Log($"AI Wins!");
             else Debug.Log($"It was a tie!");
         }
         endTurnButton.interactable = false;
