@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 public class RulesButtonHandler : MonoBehaviour
 {
-    public GameRulesSO gameRules; // reference to the object that carries your rules
+    public GameRulesSO gameRules;
 
     public Button jokerButton;
     public Button reshuffleButton;
@@ -15,6 +15,7 @@ public class RulesButtonHandler : MonoBehaviour
     public Button drawHandButton;
     public Button deckoutButton;
     public Button leastCardButton;
+    public Button MatchCardsButton;
     public TMP_InputField pointsEndButton;
     public TMP_InputField startHandButton;
     public TMP_InputField turnLimitButton;
@@ -23,7 +24,6 @@ public class RulesButtonHandler : MonoBehaviour
     public TMP_InputField playLimitButton;
     public TextMeshProUGUI descriptionText;
 
-    // This will be called by a button
     public void SetEndGameByPoints(string points)
     {
         int number;
@@ -279,6 +279,17 @@ public class RulesButtonHandler : MonoBehaviour
         }
     }
 
+    public void EnableMatchCards()
+    {
+        descriptionText.text = "Players can only play cards that match with the top discard card in some way.";
+        if (gameRules != null)
+        {
+            gameRules.rulePlayMatch = !gameRules.rulePlayMatch;
+            SetButtonColor(MatchCardsButton, gameRules.rulePlayMatch);
+        }
+        Debug.Log("Match cards enabled: " + gameRules.rulePlayMatch);
+    }
+
     void SetButtonColor(Button button, bool isActive)
     {
         Color color = isActive ? Color.green : Color.white;
@@ -310,6 +321,7 @@ public class RulesButtonHandler : MonoBehaviour
         SetButtonColor(drawHandButton, gameRules.ruleDrawHand);
         SetButtonColor(leastCardButton, gameRules.ruleLeastCardsWin);
         SetButtonColor(deckoutButton, gameRules.ruleDeckout);
+        SetButtonColor(MatchCardsButton, gameRules.rulePlayMatch);
 
         // Input fields
         SetInputFieldColor(pointsEndButton, gameRules.rulePointsEnd);

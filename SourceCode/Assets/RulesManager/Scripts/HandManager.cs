@@ -68,6 +68,7 @@ public class HandManager : MonoBehaviour
     public bool ruleOutofCards = false;     //Rule 13
     public bool ruleLeastCardsWin = false;  //Rule 14
     public int rulePlayAmount = 0;          //Rule 15
+    public bool rulePlayMatch = false;      //Rule 16
     public List<Rule> rules;                //List of Rules
 
     // ---- AI ----
@@ -99,6 +100,7 @@ public class HandManager : MonoBehaviour
         ruleOutofCards = gameRules.ruleOutofCards;
         ruleLeastCardsWin = gameRules.ruleLeastCardsWin;
         rulePlayAmount = gameRules.rulePlayAmount;
+        rulePlayMatch = gameRules.rulePlayMatch;
         currentGameId = CreateUniqueGameId();
 
         rules = new List<Rule> {
@@ -166,7 +168,8 @@ public class HandManager : MonoBehaviour
                     rulePlayAmount = UnityEngine.Random.Range(1, 3); // set amount to random 13
                     Debug.Log($"Card play max set to {rulePlayAmount}");
                 }
-            }
+            },
+            new Rule { Name = "Must play matching card with discard card", Enabled = rulePlayMatch, OnEnable = () => rulePlayMatch = true }
         };
         deck = new Deck();
         if (ruleJoker) deck.AddJoker();
@@ -322,6 +325,18 @@ public class HandManager : MonoBehaviour
         {
             Debug.Log($"You must play {rulePlayAmount} cards.");
             return;
+        }
+        if (rulePlayMatch && deck.PeekDiscard() != null)
+        {
+            var discard = deck.PeekDiscard();
+            foreach (int idx in selectedCards)
+            {
+                if (playerHand[idx].Rank != Rank.Joker && playerHand[idx].Rank != deck.PeekDiscard().Rank && playerHand[idx].Suit != deck.PeekDiscard().Suit)
+                {
+                    Debug.Log("You must play a card matching the discard card.");
+                    return;
+                }
+            }
         }
 
         // Check for Joker
@@ -1317,6 +1332,8 @@ public class HandManager : MonoBehaviour
         else
             aiRules.Add($"You can play any number of cards per turn. You MUST play at least 1 card. Seperate each card played with a '-' (example for 3 cards: 0-2-3 etc).");
 
+        if (rulePlayMatch)
+            aiRules.Add("All cards you play MUST match the discarded card in some way, either through suit or value. (Example: you can play a 2 of clubs on a 2 of hearts, you play a queen of diamonds on a 7 of diamonds.) Anything can be played on jokers and jokers can be played on anything.");
         return aiRules;
     }
 
