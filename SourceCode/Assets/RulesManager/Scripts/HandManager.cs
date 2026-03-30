@@ -69,6 +69,7 @@ public class HandManager : MonoBehaviour
     public bool ruleLeastCardsWin = false;  //Rule 14
     public int rulePlayAmount = 0;          //Rule 15
     public bool rulePlayMatch = false;      //Rule 16
+    public int ruleDrawEarlyEnd = 0;        //Rule 17
     public List<Rule> rules;                //List of Rules
 
     // ---- AI ----
@@ -101,12 +102,13 @@ public class HandManager : MonoBehaviour
         ruleLeastCardsWin = gameRules.ruleLeastCardsWin;
         rulePlayAmount = gameRules.rulePlayAmount;
         rulePlayMatch = gameRules.rulePlayMatch;
+        ruleDrawEarlyEnd = gameRules.ruleDrawEarlyEnd;
         currentGameId = CreateUniqueGameId();
 
         rules = new List<Rule> {
             new Rule { Name = "Starting hand size", Enabled = ruleStartHand != 5, OnEnable = () =>
                 {
-                    ruleStartHand = UnityEngine.Random.Range(1, 10); // random 110 cards
+                    ruleStartHand = UnityEngine.Random.Range(1, 10); // random 1-10 cards
                     Debug.Log($"Starting hand size set to {ruleStartHand}");
                 }
             },
@@ -116,7 +118,7 @@ public class HandManager : MonoBehaviour
                 Enabled = ruleDraw > 0,
                 OnEnable = () =>
                 {
-                    ruleDraw = UnityEngine.Random.Range(1, 5); // set draw to random 15
+                    ruleDraw = UnityEngine.Random.Range(1, 5); // set draw to random 1-5
                     Debug.Log($"Draw each turn set to {ruleDraw}");
                 }
             },
@@ -138,7 +140,7 @@ public class HandManager : MonoBehaviour
                 Enabled = ruleMaxHand > 0,
                 OnEnable = () =>
                 {
-                    ruleMaxHand = UnityEngine.Random.Range(1, 8); // set max to random 18
+                    ruleMaxHand = UnityEngine.Random.Range(1, 8); // set max to random 1-8
                     Debug.Log($"Max hand size set to {ruleMaxHand}");
                 }
             },
@@ -152,7 +154,7 @@ public class HandManager : MonoBehaviour
                 Enabled = ruleTurnLimit > 0,
                 OnEnable = () =>
                 {
-                    ruleTurnLimit = UnityEngine.Random.Range(turn + 3, turn + 8); // set limit to random 38 from current turn
+                    ruleTurnLimit = UnityEngine.Random.Range(turn + 3, turn + 8); // set limit to random 3-8 from current turn
                     Debug.Log($"Turn limit set to turn {ruleTurnLimit}");
                 }
             },
@@ -165,11 +167,21 @@ public class HandManager : MonoBehaviour
                 Enabled = rulePlayAmount > 0,
                 OnEnable = () =>
                 {
-                    rulePlayAmount = UnityEngine.Random.Range(1, 3); // set amount to random 13
+                    rulePlayAmount = UnityEngine.Random.Range(1, 3); // set amount to random 1-3
                     Debug.Log($"Card play max set to {rulePlayAmount}");
                 }
             },
-            new Rule { Name = "Must play matching card with discard card", Enabled = rulePlayMatch, OnEnable = () => rulePlayMatch = true }
+            new Rule { Name = "Must play matching card with discard card", Enabled = rulePlayMatch, OnEnable = () => rulePlayMatch = true },
+            new Rule
+            {
+                Name = $"You draw {ruleDrawEarlyEnd} cards if you end your turn early",
+                Enabled = ruleDrawEarlyEnd > 0,
+                OnEnable = () =>
+                {
+                    ruleDrawEarlyEnd = UnityEngine.Random.Range(1, 3); // set amount to random 1-3
+                    Debug.Log($"Card draw early set to {ruleDrawEarlyEnd}");
+                }
+            }
         };
         deck = new Deck();
         if (ruleJoker) deck.AddJoker();
@@ -316,10 +328,14 @@ public class HandManager : MonoBehaviour
     // ---- End button pressed ----
     void OnEndTurnButtonPressed()
     {
-        if (selectedCards.Count == 0)
+        if (selectedCards.Count == 0 && ruleDrawEarlyEnd == 0)
         {
             Debug.Log("No cards selected!");
             return;
+        }
+        else if (selectedCards.Count == 0 && ruleDrawEarlyEnd > 0)
+        {
+            DrawCards(ruleDrawEarlyEnd);
         }
         if (rulePlayAmount > 0 && selectedCards.Count != rulePlayAmount)
         {
@@ -436,12 +452,15 @@ public class HandManager : MonoBehaviour
     private IEnumerator PlayAICardsoroutine(string AIIndices)
     {
         Debug.Log("Coroutine started");
-        if (string.IsNullOrEmpty(AIIndices))
+        if (string.IsNullOrEmpty(AIIndices) && ruleDrawEarlyEnd == 0)
         {
             Debug.Log("AIIndices empty, exiting");
             yield break;
         }
-
+        else if (string.IsNullOrEmpty(AIIndices) && ruleDrawEarlyEnd > 0)
+        {
+            DrawAICards(ruleDrawEarlyEnd);
+        }
         string[] Parts = AIIndices.Split('-');
         List<int> AISelectedCards = Parts.Select(s => int.Parse(s)).ToList();
         playedCards.Clear();
@@ -1334,6 +1353,9 @@ public class HandManager : MonoBehaviour
 
         if (rulePlayMatch)
             aiRules.Add("All cards you play MUST match the discarded card in some way, either through suit or value. (Example: you can play a 2 of clubs on a 2 of hearts, you play a queen of diamonds on a 7 of diamonds.) Anything can be played on jokers and jokers can be played on anything.");
+        
+        if (ruleDrawEarlyEnd > 0)
+            aiRules.Add($"You can end your turn without playing cards, but if you do you will draw {ruleDrawEarlyEnd} cards.");
         return aiRules;
     }
 

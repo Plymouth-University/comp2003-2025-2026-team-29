@@ -22,6 +22,7 @@ public class RulesButtonHandler : MonoBehaviour
     public TMP_InputField drawButton;
     public TMP_InputField maxHandButton;
     public TMP_InputField playLimitButton;
+    public TMP_InputField drawEarlyEndButton;
     public TextMeshProUGUI descriptionText;
 
     public void SetEndGameByPoints(string points)
@@ -290,6 +291,31 @@ public class RulesButtonHandler : MonoBehaviour
         Debug.Log("Match cards enabled: " + gameRules.rulePlayMatch);
     }
 
+    public void SetEarlyDrawAmount(string value)
+    {
+        int number;
+        descriptionText.text = "Players can end turn without playing cards, with the penalty of drawing the set amount of cards.";
+        if (int.TryParse(value, out number))
+        {
+            if (number >= 0)
+            {
+                if (gameRules != null)
+                {
+                    gameRules.ruleDrawEarlyEnd = number;
+                    SetInputFieldColor(drawEarlyEndButton, gameRules.ruleDrawEarlyEnd > 0);
+                }
+                if (number > 0)
+                    Debug.Log("Draw amount set to: " + number);
+                else
+                    Debug.Log("End turn early disabled");
+            }
+        }
+        else
+        {
+            Debug.Log($"Input a number.");
+        }
+    }
+
     void SetButtonColor(Button button, bool isActive)
     {
         Color color = isActive ? Color.green : Color.white;
@@ -330,6 +356,7 @@ public class RulesButtonHandler : MonoBehaviour
         SetInputFieldColor(drawButton, gameRules.ruleDraw > 0);
         SetInputFieldColor(maxHandButton, gameRules.ruleMaxHand > 0);
         SetInputFieldColor(playLimitButton, gameRules.rulePlayAmount > 0);
+        SetInputFieldColor(drawEarlyEndButton, gameRules.ruleDrawEarlyEnd > 0);
     }
 
     void OnEnable()
