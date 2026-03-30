@@ -346,10 +346,9 @@ public class HandManager : MonoBehaviour
         }
         if (rulePlayMatch && deck.PeekDiscard() != null)
         {
-            var discard = deck.PeekDiscard();
             foreach (int idx in selectedCards)
             {
-                if (playerHand[idx].Rank != Rank.Joker && playerHand[idx].Rank != deck.PeekDiscard().Rank && playerHand[idx].Suit != deck.PeekDiscard().Suit)
+                if (playerHand[idx].Rank != Rank.Joker && deck.PeekDiscard().Rank != Rank.Joker && playerHand[idx].Rank != deck.PeekDiscard().Rank && playerHand[idx].Suit != deck.PeekDiscard().Suit)
                 {
                     Debug.Log("You must play a card matching the discard card.");
                     return;
