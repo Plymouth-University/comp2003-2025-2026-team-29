@@ -19,6 +19,7 @@ public class HandManager : MonoBehaviour
     public GameObject losePanel;
     public TextMeshProUGUI playerPoints;
     public TextMeshProUGUI AIPoints;
+    public TextMeshProUGUI turnNumber;
     public Image discardTopCardImage;
     public Texture2D[] cardTextures;
     public Dictionary<string, Texture2D> cardTextureDict = new Dictionary<string, Texture2D>();
@@ -215,6 +216,7 @@ public class HandManager : MonoBehaviour
             playerPoints.text = "Player: 0 points";
             AIPoints.text = "AI: 0 points";
         }
+        if (ruleTurnLimit > 0) turnNumber.text = $"turn : {turn + 1}";
 
         StartCoroutine(PrimeAIOnStartup());
     }
@@ -653,6 +655,7 @@ public class HandManager : MonoBehaviour
             EndGame();
 
         turn += 1;
+        if (ruleTurnLimit > 0) turnNumber.text = $"turn : {turn + 1}";
         UpdateHandUI();
 
         if (turn != 0 && !gameEnd)
