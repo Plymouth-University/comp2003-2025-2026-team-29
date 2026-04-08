@@ -8,6 +8,8 @@ public class Presets : MonoBehaviour
     public TextMeshProUGUI descriptionText;
 
     public Button UnoRulesButton;
+    public Button OneCardButton;
+    public Button ResetButton;
 
     public void EnableUno()
     {
@@ -30,5 +32,51 @@ public class Presets : MonoBehaviour
         gameRules.rulePlayAmount = 1;
         gameRules.rulePlayMatch = true;
         gameRules.ruleDrawEarlyEnd = 1;
+    }
+
+    public void EnableOneCard()
+    {
+        descriptionText.text = "One card rules applied.";
+        gameRules.ruleJoker = false;
+        gameRules.rulesCard = false;
+        gameRules.ruleReshuffle = false;
+        gameRules.ruleStartHand = 1;
+        gameRules.ruleDraw = 0;
+        gameRules.ruleMaxHand = 0;
+        gameRules.rulePointsEnabled = true;
+        gameRules.rulePointsEnd = false;
+        gameRules.rulePointsWin = true;
+        gameRules.pointEndLimit = 0;
+        gameRules.ruleDrawHand = false;
+        gameRules.ruleTurnLimit = 1;
+        gameRules.ruleDeckout = false;
+        gameRules.ruleOutofCards = false;
+        gameRules.ruleLeastCardsWin = false;
+        gameRules.rulePlayAmount = 0;
+        gameRules.rulePlayMatch = false;
+        gameRules.ruleDrawEarlyEnd = 0;
+    }
+
+    public void ResetRules()
+    {
+        descriptionText.text = "Rules reset.";
+        gameRules.ruleJoker = false;
+        gameRules.rulesCard = false;
+        gameRules.ruleReshuffle = false;
+        gameRules.ruleStartHand = 5;
+        gameRules.ruleDraw = 0;
+        gameRules.ruleMaxHand = 0;
+        gameRules.rulePointsEnabled = false;
+        gameRules.rulePointsEnd = false;
+        gameRules.rulePointsWin = false;
+        gameRules.pointEndLimit = 0;
+        gameRules.ruleDrawHand = false;
+        gameRules.ruleTurnLimit = 0;
+        gameRules.ruleDeckout = false;
+        gameRules.ruleOutofCards = false;
+        gameRules.ruleLeastCardsWin = false;
+        gameRules.rulePlayAmount = 0;
+        gameRules.rulePlayMatch = false;
+        gameRules.ruleDrawEarlyEnd = 0;
     }
 }
