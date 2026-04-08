@@ -75,6 +75,16 @@ public class RuleChanger : MonoBehaviour
         if (int.TryParse(value, out int count))
             gameRules.rulePlayAmount = count;
     }
+
+    // ---- Card match ----
+    public void ToggleMatchCards() => gameRules.rulePlayMatch = !gameRules.rulePlayMatch;
+
+    // ---- End Turn Early ----
+    public void SetEarlyDraw(string value)
+    {
+        if (int.TryParse(value, out int count))
+            gameRules.ruleDrawEarlyEnd = count;
+    }
 }
 
 
