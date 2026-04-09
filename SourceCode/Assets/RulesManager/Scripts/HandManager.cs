@@ -228,75 +228,98 @@ public class HandManager : MonoBehaviour
             Destroy(child.gameObject);
 
         float spacing = 0f;
-        float startX = 0;
+        float startX = 0f;
         float AIspacing = 0f;
-        float AIstartX = 0;
+        float AIstartX = 0f;
 
         if (playerHand.Count > 1)
         {
             spacing = 550f / (playerHand.Count - 1);
-            startX = -((playerHand.Count - 1) * spacing) / 2;
+            startX = -((playerHand.Count - 1) * spacing) / 2f;
         }
-        else
-        {
-            spacing = 0f;
-            startX = 0;
-        }
+
         if (AIHand.Count > 1)
         {
             AIspacing = 550f / (AIHand.Count - 1);
-            AIstartX = -((AIHand.Count - 1) * AIspacing) / 2;
+            AIstartX = -((AIHand.Count - 1) * AIspacing) / 2f;
         }
-        else
-        {
-            AIspacing = 0f;
-            AIstartX = 0;
-        }
+
+        // ---- Player hand ----
         for (int i = 0; i < playerHand.Count; i++)
         {
             GameObject cardButton = Instantiate(cardPrefab, cardParent);
+
             string cardKey = GetCardKey(playerHand[i]);
             if (cardTextureDict.TryGetValue(cardKey, out Texture2D tex))
             {
-                // --- Step 3: convert the texture to a Sprite and apply to the button ---
-                Sprite s = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
-                cardButton.GetComponent<Image>().sprite = s; // assign sprite to button
+                Sprite s = Sprite.Create(
+                    tex,
+                    new Rect(0, 0, tex.width, tex.height),
+                    new Vector2(0.5f, 0.5f)
+                );
+                cardButton.GetComponent<Image>().sprite = s;
             }
 
             TMP_Text tmpText = cardButton.GetComponentInChildren<TMP_Text>();
-            if (tmpText != null) tmpText.text = playerHand[i].ToString();
+            if (tmpText != null)
+                tmpText.text = playerHand[i].ToString();
 
             RectTransform rt = cardButton.GetComponent<RectTransform>();
             rt.anchoredPosition = new Vector2(startX + i * spacing, 60);
             rt.sizeDelta = new Vector2(120, 180);
 
             int index = i;
-            cardButton.GetComponent<Button>().onClick.AddListener(() => OnCardClicked(index));
+            Button btn = cardButton.GetComponent<Button>();
+            if (btn != null)
+                btn.onClick.AddListener(() => OnCardClicked(index));
         }
+
+        // ---- AI hand ----
         for (int i = 0; i < AIHand.Count; i++)
         {
             GameObject AICardButton = Instantiate(cardPrefab, cardParent);
 
             Image img = AICardButton.GetComponent<Image>();
-            Sprite backSprite = GetCardBackSprite();
 
-            if (img != null && backSprite != null)
-                img.sprite = backSprite;
+            if (cardTextureDict.TryGetValue(GetCardKey(AIHand[i]), out Texture2D aiTex))
+            {
+                Sprite aiSprite = Sprite.Create(
+                    aiTex,
+                    new Rect(0, 0, aiTex.width, aiTex.height),
+                    new Vector2(0.5f, 0.5f)
+                );
+                img.sprite = aiSprite;
+            }
+            else
+            {
+                Sprite backSprite = GetCardBackSprite();
+                if (img != null && backSprite != null)
+                    img.sprite = backSprite;
+            }
+
+            TMP_Text aiTmpText = AICardButton.GetComponentInChildren<TMP_Text>();
+            if (aiTmpText != null)
+            {
+                aiTmpText.text = $"[{i}] {AIHand[i]}";
+                aiTmpText.fontSize = 18;
+            }
 
             RectTransform rt = AICardButton.GetComponent<RectTransform>();
             rt.anchoredPosition = new Vector2(AIstartX + i * AIspacing, 1000);
             rt.sizeDelta = new Vector2(120, 180);
 
             Button btn = AICardButton.GetComponent<Button>();
-            btn.interactable = false;
+            if (btn != null)
+                btn.interactable = false;
+
             CanvasGroup cg = AICardButton.GetComponent<CanvasGroup>();
             if (cg == null)
                 cg = AICardButton.AddComponent<CanvasGroup>();
             cg.blocksRaycasts = false;
-
-            int AIindex = i;
         }
     }
+
+    
 
     void OnCardClicked(int index)
     {
@@ -617,6 +640,7 @@ public class HandManager : MonoBehaviour
 
         endTurnButton.interactable = false;
 
+        LogAIHand("Before AI chooses move");
         GeminiRequest req = BuildAITurnRequest();
         GeminiResponse aiMoveResponse = null;
         yield return StartCoroutine(SendAIRequestWithRetry(req, aiMaxAttempts, response => aiMoveResponse = response));
@@ -624,8 +648,9 @@ public class HandManager : MonoBehaviour
         string aiCardsToPlay = null;
         List<int> aiIndices = new List<int>();
 
-        if (aiMoveResponse != null && TryParseCardIndices(aiMoveResponse.discardReturn, AIHand.Count, out aiIndices))
+        /*if (aiMoveResponse != null && TryParseCardIndices(aiMoveResponse.discardReturn, AIHand.Count, out aiIndices))
         {
+            LogSelectedAIIndices("Parsed Gemini selection", aiIndices);
             GeminiResponse aiValidationResponse = null;
             yield return StartCoroutine(ValidateMoveWithAI(false, AIHand, aiIndices, "AI", response => aiValidationResponse = response));
 
@@ -638,12 +663,43 @@ public class HandManager : MonoBehaviour
             {
                 Debug.LogWarning("AI move failed validation: " + validationMessage);
             }
+        }*/
+        if (aiMoveResponse != null && TryParseCardIndices(aiMoveResponse.discardReturn, AIHand.Count, out aiIndices))
+        {
+            LogSelectedAIIndices("Parsed Gemini selection", aiIndices);
+
+            if (AreSelectedAICardsLocallyValid(aiIndices, out string localReason))
+            {
+                GeminiResponse aiValidationResponse = null;
+                yield return StartCoroutine(ValidateMoveWithAI(false, AIHand, aiIndices, "AI", response => aiValidationResponse = response));
+
+                if (IsValidationSuccessful(aiValidationResponse, out string validationMessage))
+                {
+                    aiCardsToPlay = BuildIndicesString(aiIndices);
+                    Debug.Log("AI response accepted: " + aiCardsToPlay);
+                }
+                else
+                {
+                    Debug.LogWarning("AI move failed AI validation: " + validationMessage);
+                }
+            }
+            else
+            {
+                Debug.LogWarning("AI move failed LOCAL validation: " + localReason);
+            }
         }
 
         if (string.IsNullOrWhiteSpace(aiCardsToPlay))
         {
             Debug.LogWarning("AI error or invalid move. Falling back to random valid card selection.");
             aiCardsToPlay = BuildFallbackAICards();
+            Debug.Log("[AI DEBUG] Fallback move string = " + aiCardsToPlay);
+
+            if (!string.IsNullOrWhiteSpace(aiCardsToPlay) &&
+                TryParseCardIndices(aiCardsToPlay, AIHand.Count, out List<int> fallbackIndices))
+            {
+                LogSelectedAIIndices("Fallback selection", fallbackIndices);
+            }
         }
 
         PlayAICards(aiCardsToPlay);
@@ -709,18 +765,45 @@ public class HandManager : MonoBehaviour
 
     private GeminiRequest BuildAITurnRequest()
     {
+
+
         List<string> aiRules = GetActiveRulesForAI();
-        aiRules.Add("IMPORTANT RESPONSE FORMAT: discardReturn may contain MULTIPLE card indexes.");
+        /*aiRules.Add("IMPORTANT RESPONSE FORMAT: discardReturn may contain MULTIPLE card indexes.");
         aiRules.Add("If you want to play more than one card, return all chosen indexes separated with '-' such as 0-2 or 1-3-4.");
         aiRules.Add(rulePlayAmount > 0
             ? $"You must return exactly {rulePlayAmount} indexes in discardReturn."
-            : "You may return one or more indexes in discardReturn. Prefer a valid multi-card play when that is sensible under the current rules.");
+            : "You may return one or more indexes in discardReturn. Prefer a valid multi-card play when that is sensible under the current rules.");*/
         aiRules.Add("updatedHand should list the hand after removing every played card, not just one card.");
+        aiRules.Add("IMPORTANT JSON RULE: action must be the string PLAY.");
+        aiRules.Add("IMPORTANT JSON RULE: discardReturn must be a STRING such as \"0\" or \"0-2\", never an array like [0] or [0,2].");
+
+        if (rulePlayAmount > 0)
+        {
+            aiRules.Add($"IMPORTANT: You must play EXACTLY {rulePlayAmount} card(s).");
+            aiRules.Add($"IMPORTANT: discardReturn must contain EXACTLY {rulePlayAmount} index value(s), no more and no fewer.");
+            aiRules.Add("If you return too many or too few indexes, the move is invalid.");
+        }
+        else
+        {
+            aiRules.Add("discardReturn may contain one or more card indexes.");
+            aiRules.Add("If you want to play more than one card, return all chosen indexes separated with '-' such as 0-2 or 1-3-4.");
+        }
+
+
+        Debug.Log("[AI DEBUG] Building AI turn request...");
+        Debug.Log("[AI DEBUG] Game ID: " + currentGameId);
+        Debug.Log("[AI DEBUG] Discard top: " + (deck.DiscardCount > 0 ? deck.PeekDiscard().ToString() : "(none)"));
+        Debug.Log("[AI DEBUG] Active rules: " + string.Join(" | ", aiRules));
+        Debug.Log("[AI DEBUG] AI hand being sent: " + string.Join(", ", AIHand.Select((c, i) => $"[{i}] {c}")));
+
 
         return new GeminiRequest
         {
             gameId = currentGameId,
-            instruction = "You are a player in a card game. Your goal is to play as well as possible to win the game. The gameId uniquely identifies the current match. Using the rules listed in rules, the cards in your hand in playerHand, and the top discard in discardTop, choose your move. Return ONLY JSON. For discardReturn, return the card index or indexes from your current hand, separated with '-' and starting from 0. Examples: 2 or 0-2 or 1-3-4. If multiple cards are played, include ALL played card indexes in discardReturn.",
+            /* instruction = "You are a player in a card game. Your goal is to play as well as possible to win the game. The gameId uniquely identifies the current match. Using the rules listed in rules, the cards in your hand in playerHand, and the top discard in discardTop, choose your move. Return ONLY JSON. For discardReturn, return the card index or indexes from your current hand, separated with '-' and starting from 0. Examples: 2 or 0-2 or 1-3-4. If multiple cards are played, include ALL played card indexes in discardReturn.", */
+            /*instruction = "You are a player in a card game. Choose a move that is fully legal under the listed rules. Follow the rules exactly. Return ONLY JSON. discardReturn must contain only indexes from your current hand, starting from 0. If the rules require exactly N cards, return exactly N indexes and no others. Never return an illegal move. If no legal move exists and ending the turn without playing is allowed, return an empty discardReturn.",*/
+            instruction = "You are a player in a card game. Choose a move that is fully legal under the listed rules. Follow the rules exactly. Return ONLY JSON in this exact format: {\"action\":\"PLAY\",\"discardReturn\":\"0\",\"updatedHand\":[\"Card A\",\"Card B\"]}. action must be a string. discardReturn must be a STRING, not an array. Use \"0\" for one card or \"0-2\" for multiple cards. If exactly one card must be played, return exactly one index as a string. Never return an illegal move.",
+
             rules = new GeminiRules
             {
                 rules = aiRules
@@ -812,6 +895,12 @@ public class HandManager : MonoBehaviour
                 if (geminiAI.latestResponse != null && !string.IsNullOrWhiteSpace(geminiAI.latestResponse.action))
                 {
                     finalResponse = geminiAI.latestResponse;
+                    Debug.Log("[AI DEBUG] Response received:");
+                    Debug.Log("[AI DEBUG] action = " + finalResponse.action);
+                    Debug.Log("[AI DEBUG] discardReturn = " + finalResponse.discardReturn);
+                    Debug.Log("[AI DEBUG] updatedHand = " + (finalResponse.updatedHand != null
+                        ? string.Join(", ", finalResponse.updatedHand)
+                        : "(null)"));
                     break;
                 }
 
@@ -914,12 +1003,69 @@ public class HandManager : MonoBehaviour
         return true;
     }
 
+    private bool AreSelectedAICardsLocallyValid(List<int> indices, out string reason)
+    {
+        reason = "";
+
+        if (indices == null || indices.Count == 0)
+        {
+            if (ruleDrawEarlyEnd > 0)
+                return true;
+
+            reason = "No cards selected.";
+            return false;
+        }
+
+        if (rulePlayAmount > 0 && indices.Count != rulePlayAmount)
+        {
+            reason = $"AI must play exactly {rulePlayAmount} cards.";
+            return false;
+        }
+
+        foreach (int idx in indices)
+        {
+            if (idx < 0 || idx >= AIHand.Count)
+            {
+                reason = $"AI selected out-of-range index {idx}.";
+                return false;
+            }
+        }
+
+        if (rulePlayMatch && deck.PeekDiscard() != null)
+        {
+            Card discard = deck.PeekDiscard();
+
+            foreach (int idx in indices)
+            {
+                Card c = AIHand[idx];
+
+                bool isJoker = c.Rank == Rank.Joker || c.Rank == Rank.Joker2;
+                bool discardIsJoker = discard.Rank == Rank.Joker || discard.Rank == Rank.Joker2;
+
+                if (!isJoker && !discardIsJoker)
+                {
+                    bool matchesRank = c.Rank == discard.Rank;
+                    bool matchesSuit = c.Suit == discard.Suit;
+
+                    if (!matchesRank && !matchesSuit)
+                    {
+                        reason = $"AI selected illegal card [{idx}] {c} for discard {discard}.";
+                        return false;
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
+
     private string BuildIndicesString(IEnumerable<int> indices)
     {
         return string.Join("-", indices);
     }
 
-    private string BuildFallbackAICards()
+    /* private string BuildFallbackAICards()
     {
         if (AIHand.Count == 0)
             return string.Empty;
@@ -947,7 +1093,71 @@ public class HandManager : MonoBehaviour
         fallback.Sort();
         return BuildIndicesString(fallback);
     }
+    ----- */
+    private string BuildFallbackAICards()
+    {
+        if (AIHand.Count == 0)
+            return string.Empty;
 
+        List<int> validIndices = new List<int>();
+
+        for (int i = 0; i < AIHand.Count; i++)
+        {
+            Card c = AIHand[i];
+
+            bool valid = true;
+
+            if (rulePlayMatch && deck.PeekDiscard() != null)
+            {
+                Card discard = deck.PeekDiscard();
+
+                bool isJoker = c.Rank == Rank.Joker || c.Rank == Rank.Joker2;
+                bool discardIsJoker = discard.Rank == Rank.Joker || discard.Rank == Rank.Joker2;
+
+                if (!isJoker && !discardIsJoker)
+                {
+                    bool matchesRank = c.Rank == discard.Rank;
+                    bool matchesSuit = c.Suit == discard.Suit;
+
+                    if (!matchesRank && !matchesSuit)
+                        valid = false;
+                }
+            }
+
+            if (valid)
+                validIndices.Add(i);
+        }
+
+        if (validIndices.Count == 0)
+        {
+            if (ruleDrawEarlyEnd > 0)
+                return string.Empty;
+
+            return string.Empty;
+        }
+
+        if (rulePlayAmount > 0)
+        {
+            if (validIndices.Count < rulePlayAmount)
+            {
+                if (ruleDrawEarlyEnd > 0)
+                    return string.Empty;
+
+                return string.Empty;
+            }
+
+            List<int> chosen = validIndices.Take(rulePlayAmount).ToList();
+            return BuildIndicesString(chosen);
+        }
+        else
+        {
+            // simple legal fallback: just play one valid card
+            return BuildIndicesString(new List<int> { validIndices[0] });
+        }
+    }
+    /* ----- */
+
+    
     private void ShowTurnMessage(string message)
     {
         if (turnMessageText != null)
@@ -1478,5 +1688,35 @@ public class HandManager : MonoBehaviour
                 Debug.Log($"Rule disabled: {Name}");
             }
         }
+    }
+
+    private void LogAIHand(string label)
+    {
+        string handText = AIHand.Count == 0
+            ? "(empty)"
+            : string.Join(", ", AIHand.Select((c, i) => $"[{i}] {c}"));
+
+        Debug.Log($"[AI DEBUG] {label} | AI Hand = {handText}");
+    }
+
+    private void LogSelectedAIIndices(string label, List<int> indices)
+    {
+        if (indices == null || indices.Count == 0)
+        {
+            Debug.Log($"[AI DEBUG] {label} | No indices selected");
+            return;
+        }
+
+        List<string> selectedCardsText = new List<string>();
+
+        foreach (int idx in indices)
+        {
+            if (idx >= 0 && idx < AIHand.Count)
+                selectedCardsText.Add($"[{idx}] {AIHand[idx]}");
+            else
+                selectedCardsText.Add($"[{idx}] OUT OF RANGE");
+        }
+
+        Debug.Log($"[AI DEBUG] {label} | Selected indices = {string.Join(", ", indices)} | Selected cards = {string.Join(", ", selectedCardsText)}");
     }
 }
