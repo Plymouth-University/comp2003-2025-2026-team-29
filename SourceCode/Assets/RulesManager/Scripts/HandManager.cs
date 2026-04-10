@@ -280,29 +280,13 @@ public class HandManager : MonoBehaviour
             GameObject AICardButton = Instantiate(cardPrefab, cardParent);
 
             Image img = AICardButton.GetComponent<Image>();
-
-            if (cardTextureDict.TryGetValue(GetCardKey(AIHand[i]), out Texture2D aiTex))
-            {
-                Sprite aiSprite = Sprite.Create(
-                    aiTex,
-                    new Rect(0, 0, aiTex.width, aiTex.height),
-                    new Vector2(0.5f, 0.5f)
-                );
-                img.sprite = aiSprite;
-            }
-            else
-            {
-                Sprite backSprite = GetCardBackSprite();
-                if (img != null && backSprite != null)
-                    img.sprite = backSprite;
-            }
+            Sprite backSprite = GetCardBackSprite();
+            if (img != null && backSprite != null)
+                img.sprite = backSprite;
 
             TMP_Text aiTmpText = AICardButton.GetComponentInChildren<TMP_Text>();
             if (aiTmpText != null)
-            {
-                aiTmpText.text = $"[{i}] {AIHand[i]}";
-                aiTmpText.fontSize = 18;
-            }
+                aiTmpText.text = "";
 
             RectTransform rt = AICardButton.GetComponent<RectTransform>();
             rt.anchoredPosition = new Vector2(AIstartX + i * AIspacing, 1000);
@@ -318,9 +302,7 @@ public class HandManager : MonoBehaviour
             cg.blocksRaycasts = false;
         }
     }
-
     
-
     void OnCardClicked(int index)
     {
         RectTransform rt = cardParent.GetChild(index).GetComponent<RectTransform>();
