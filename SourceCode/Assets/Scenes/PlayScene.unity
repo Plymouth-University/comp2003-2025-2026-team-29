@@ -242,7 +242,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 6.6666665
+  orthographic size: 5.4545455
   m_Depth: 0
   m_CullingMask:
     serializedVersion: 2
@@ -4081,16 +4081,16 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 193135403}
-        m_TargetAssemblyTypeName: Loader, Assembly-CSharp
-        m_MethodName: LoadSceneByName
+      - m_Target: {fileID: 11500000, guid: 23d0f3264fda6804191e6590080114e1, type: 3}
+        m_TargetAssemblyTypeName: UnityEditor.MonoScript, UnityEditor.CoreModule
+        m_MethodName: set_name
         m_Mode: 5
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
-          m_StringArgument: MenuScene
+          m_StringArgument: ReturnToMenu
           m_BoolArgument: 0
         m_CallState: 2
 --- !u!114 &1583879383
@@ -4825,6 +4825,7 @@ MonoBehaviour:
   rules: []
   geminiAI: {fileID: 1662743510}
   turnMessageText: {fileID: 0}
+  menuManager: {fileID: 0}
 --- !u!4 &1722398834
 Transform:
   m_ObjectHideFlags: 0

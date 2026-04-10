@@ -83,6 +83,8 @@ public class HandManager : MonoBehaviour
     private const float aiResponseTimeoutSeconds = 15f;
     private const float aiRetryDelaySeconds = 0.75f;
 
+    public MenuManager menuManager;
+
     void Start()
     {
         // Use the values from the ScriptableObject
@@ -346,24 +348,39 @@ public class HandManager : MonoBehaviour
             FinishTurn();
             return;
         }
+
         if (rulePlayAmount > 0 && selectedCards.Count != rulePlayAmount)
         {
             Debug.Log($"You must play {rulePlayAmount} cards.");
             return;
         }
+
         if (rulePlayMatch && deck.PeekDiscard() != null)
         {
+            Card discard = deck.PeekDiscard();
+
             foreach (int idx in selectedCards)
             {
-                if (playerHand[idx].Rank != Rank.Joker && deck.PeekDiscard().Rank != Rank.Joker && playerHand[idx].Rank != deck.PeekDiscard().Rank && playerHand[idx].Suit != deck.PeekDiscard().Suit)
+                Card c = playerHand[idx];
+
+                bool isJoker = c.Rank == Rank.Joker || c.Rank == Rank.Joker2;
+                bool discardIsJoker = discard.Rank == Rank.Joker || discard.Rank == Rank.Joker2;
+
+                // Only require matching when neither card is a joker
+                if (!isJoker && !discardIsJoker)
                 {
-                    Debug.Log("You must play a card matching the discard card.");
-                    return;
+                    bool matchesRank = c.Rank == discard.Rank;
+                    bool matchesSuit = c.Suit == discard.Suit;
+
+                    if (!matchesRank && !matchesSuit)
+                    {
+                        Debug.Log("You must play a card matching the discard card.");
+                        return;
+                    }
                 }
             }
         }
 
-        // Check for Joker
         int jokerIdx = selectedCards.FirstOrDefault(idx =>
             playerHand[idx].Rank == Rank.Joker || playerHand[idx].Rank == Rank.Joker2);
 
@@ -371,8 +388,9 @@ public class HandManager : MonoBehaviour
         {
             currentJokerIndex = jokerIdx;
             jokerPanel.SetActive(true);
-            return; // Wait for Joker value
+            return; // Wait for Joker value selection
         }
+
         StartCoroutine(ValidateAndPlayPlayerTurn());
     }
 
@@ -623,58 +641,41 @@ public class HandManager : MonoBehaviour
         endTurnButton.interactable = false;
 
         LogAIHand("Before AI chooses move");
+
         GeminiRequest req = BuildAITurnRequest();
+         
         GeminiResponse aiMoveResponse = null;
         yield return StartCoroutine(SendAIRequestWithRetry(req, aiMaxAttempts, response => aiMoveResponse = response));
 
         string aiCardsToPlay = null;
         List<int> aiIndices = new List<int>();
 
-        /*if (aiMoveResponse != null && TryParseCardIndices(aiMoveResponse.discardReturn, AIHand.Count, out aiIndices))
-        {
-            LogSelectedAIIndices("Parsed Gemini selection", aiIndices);
-            GeminiResponse aiValidationResponse = null;
-            yield return StartCoroutine(ValidateMoveWithAI(false, AIHand, aiIndices, "AI", response => aiValidationResponse = response));
-
-            if (IsValidationSuccessful(aiValidationResponse, out string validationMessage))
-            {
-                aiCardsToPlay = BuildIndicesString(aiIndices);
-                Debug.Log("AI response accepted: " + aiCardsToPlay);
-            }
-            else
-            {
-                Debug.LogWarning("AI move failed validation: " + validationMessage);
-            }
-        }*/
         if (aiMoveResponse != null && TryParseCardIndices(aiMoveResponse.discardReturn, AIHand.Count, out aiIndices))
         {
             LogSelectedAIIndices("Parsed Gemini selection", aiIndices);
 
+            // ✅ LOCAL VALIDATION
             if (AreSelectedAICardsLocallyValid(aiIndices, out string localReason))
             {
-                GeminiResponse aiValidationResponse = null;
-                yield return StartCoroutine(ValidateMoveWithAI(false, AIHand, aiIndices, "AI", response => aiValidationResponse = response));
-
-                if (IsValidationSuccessful(aiValidationResponse, out string validationMessage))
-                {
-                    aiCardsToPlay = BuildIndicesString(aiIndices);
-                    Debug.Log("AI response accepted: " + aiCardsToPlay);
-                }
-                else
-                {
-                    Debug.LogWarning("AI move failed AI validation: " + validationMessage);
-                }
+                aiCardsToPlay = BuildIndicesString(aiIndices);
+                Debug.Log("AI move accepted (LOCAL validation): " + aiCardsToPlay);
             }
             else
             {
                 Debug.LogWarning("AI move failed LOCAL validation: " + localReason);
             }
         }
+        else
+        {
+            Debug.LogWarning("AI returned invalid format or indices.");
+        }
 
+        // ✅ FALLBACK
         if (string.IsNullOrWhiteSpace(aiCardsToPlay))
         {
-            Debug.LogWarning("AI error or invalid move. Falling back to random valid card selection.");
+            Debug.LogWarning("AI error or invalid move. Falling back to local valid selection.");
             aiCardsToPlay = BuildFallbackAICards();
+
             Debug.Log("[AI DEBUG] Fallback move string = " + aiCardsToPlay);
 
             if (!string.IsNullOrWhiteSpace(aiCardsToPlay) &&
@@ -683,6 +684,8 @@ public class HandManager : MonoBehaviour
                 LogSelectedAIIndices("Fallback selection", fallbackIndices);
             }
         }
+
+               
 
         PlayAICards(aiCardsToPlay);
 
@@ -704,7 +707,6 @@ public class HandManager : MonoBehaviour
             endTurnButton.interactable = true;
         }
     }
-
 
     private IEnumerator PrimeAIOnStartup()
     {
@@ -785,6 +787,7 @@ public class HandManager : MonoBehaviour
             /* instruction = "You are a player in a card game. Your goal is to play as well as possible to win the game. The gameId uniquely identifies the current match. Using the rules listed in rules, the cards in your hand in playerHand, and the top discard in discardTop, choose your move. Return ONLY JSON. For discardReturn, return the card index or indexes from your current hand, separated with '-' and starting from 0. Examples: 2 or 0-2 or 1-3-4. If multiple cards are played, include ALL played card indexes in discardReturn.", */
             /*instruction = "You are a player in a card game. Choose a move that is fully legal under the listed rules. Follow the rules exactly. Return ONLY JSON. discardReturn must contain only indexes from your current hand, starting from 0. If the rules require exactly N cards, return exactly N indexes and no others. Never return an illegal move. If no legal move exists and ending the turn without playing is allowed, return an empty discardReturn.",*/
             instruction = "You are a player in a card game. Choose a move that is fully legal under the listed rules. Follow the rules exactly. Return ONLY JSON in this exact format: {\"action\":\"PLAY\",\"discardReturn\":\"0\",\"updatedHand\":[\"Card A\",\"Card B\"]}. action must be a string. discardReturn must be a STRING, not an array. Use \"0\" for one card or \"0-2\" for multiple cards. If exactly one card must be played, return exactly one index as a string. Never return an illegal move.",
+            /* instruction = "Choose the best legal move. Return ONLY JSON: {\"action\":\"PLAY\",\"discardReturn\":\"0\",\"updatedHand\":[\"Card A\"]}. action must be PLAY. discardReturn must be a string, never an array. Use \"0\" for one card, \"0-2\" for multiple cards, or \"\" if no card is played."; */
 
             rules = new GeminiRules
             {
@@ -939,6 +942,7 @@ public class HandManager : MonoBehaviour
         return description;
     }
 
+    
     private List<string> GetValidationRulesForAI(bool isPlayerMove, int handCount)
     {
         List<string> validationRules = new List<string>(GetActiveRulesForAI());
@@ -948,12 +952,12 @@ public class HandManager : MonoBehaviour
         validationRules.Add("A move is INVALID if any selected card index does not exist in the current hand.");
         validationRules.Add("A move is INVALID if no cards are selected.");
         validationRules.Add("If a fixed card play amount rule is active, the number of selected cards must match it exactly.");
-        validationRules.Add("If jokers are selected, they must already have a declared value.");
+        validationRules.Add("Jokers are valid wildcard plays. If selected, they may require a separate value selection step.");
         validationRules.Add("Ignore future draw actions. Only validate the cards being played right now.");
 
         return validationRules;
     }
-
+    
     private bool TryParseCardIndices(string value, int handCount, out List<int> indices)
     {
         indices = new List<int>();
@@ -1047,35 +1051,6 @@ public class HandManager : MonoBehaviour
         return string.Join("-", indices);
     }
 
-    /* private string BuildFallbackAICards()
-    {
-        if (AIHand.Count == 0)
-            return string.Empty;
-
-        int playAmount;
-        if (rulePlayAmount > 0)
-        {
-            playAmount = Mathf.Min(rulePlayAmount, AIHand.Count);
-        }
-        else
-        {
-            // When there is no fixed play limit, allow the fallback to choose multiple cards too.
-            playAmount = UnityEngine.Random.Range(1, AIHand.Count + 1);
-        }
-
-        List<int> fallback = new List<int>();
-
-        while (fallback.Count < playAmount)
-        {
-            int candidate = UnityEngine.Random.Range(0, AIHand.Count);
-            if (!fallback.Contains(candidate))
-                fallback.Add(candidate);
-        }
-
-        fallback.Sort();
-        return BuildIndicesString(fallback);
-    }
-    ----- */
     private string BuildFallbackAICards()
     {
         if (AIHand.Count == 0)
@@ -1700,5 +1675,19 @@ public class HandManager : MonoBehaviour
         }
 
         Debug.Log($"[AI DEBUG] {label} | Selected indices = {string.Join(", ", indices)} | Selected cards = {string.Join(", ", selectedCardsText)}");
+    }
+
+    public void ReturnToMenu()
+    {
+        Debug.Log("Returning to main menu...");
+
+        if (menuManager != null)
+        {
+            menuManager.ShowMainMenu();
+        }
+        else
+        {
+            Debug.LogError("MenuManager reference is missing!");
+        }
     }
 }
