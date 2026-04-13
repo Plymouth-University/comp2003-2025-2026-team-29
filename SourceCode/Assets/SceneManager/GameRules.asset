@@ -16,7 +16,7 @@ MonoBehaviour:
   ruleJoker: 0
   rulesCard: 0
   ruleStartHand: 5
-  ruleDraw: 0
+  ruleDraw: 2
   ruleMaxHand: 0
   rulePointsEnabled: 0
   rulePointsEnd: 0
@@ -27,6 +27,6 @@ MonoBehaviour:
   ruleDeckout: 0
   ruleOutofCards: 0
   ruleLeastCardsWin: 0
-  rulePlayAmount: 0
+  rulePlayAmount: 2
   rulePlayMatch: 0
   ruleDrawEarlyEnd: 0
