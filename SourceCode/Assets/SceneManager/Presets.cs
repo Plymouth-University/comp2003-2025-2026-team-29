@@ -37,7 +37,7 @@ public class Presets : MonoBehaviour
 
     public void EnableUnoX2()
     {
-        descriptionText.text = "Uno(2) rules have been applied.";
+        descriptionText.text = "UnoX2 rules have been applied.";
         gameRules.ruleJoker = true;
         gameRules.rulesCard = false;
         gameRules.ruleReshuffle = true;
