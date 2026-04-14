@@ -24,6 +24,7 @@ public class HandManager : MonoBehaviour
     public Image discardTopCardImage;
     public Texture2D[] cardTextures;
     public Dictionary<string, Texture2D> cardTextureDict = new Dictionary<string, Texture2D>();
+
     [Header("Card Art")]
     public Texture2D cardBackTexture;
     public GameObject cardVisualPrefab;
@@ -55,27 +56,28 @@ public class HandManager : MonoBehaviour
     private int totalPoints = 0;
     private int totalAIPoints = 0;
     public int pointEndLimit = 0;
-    public int ruleStartHand = 5;           //Rule 1
-    public int ruleDraw = 0;                //Rule 2
-    public int ruleMaxHand = 0;             //Rule 3
-    public bool rulePointsEnabled = false;  //Rule 4
-    public bool rulePointsEnd = false;      //Rule 5
-    public bool rulePointsWin = false;      //Rule 6
-    public bool ruleReshuffle = false;      //Rule 7
-    public bool ruleJoker = false;          //Rule 8
-    public bool rulesCard = false;          //Rule 9
-    public bool ruleDrawHand = false;       //Rule 10
-    public int ruleTurnLimit = 0;           //Rule 11
-    public bool ruleDeckout = false;        //Rule 12
-    public bool ruleOutofCards = false;     //Rule 13
-    public bool ruleLeastCardsWin = false;  //Rule 14
-    public int rulePlayAmount = 0;          //Rule 15
-    public bool rulePlayMatch = false;      //Rule 16
-    public int ruleDrawEarlyEnd = 0;        //Rule 17
-    public List<Rule> rules;                //List of Rules
+    public int ruleStartHand = 5;           // Rule 1
+    public int ruleDraw = 0;                // Rule 2
+    public int ruleMaxHand = 0;             // Rule 3
+    public bool rulePointsEnabled = false;  // Rule 4
+    public bool rulePointsEnd = false;      // Rule 5
+    public bool rulePointsWin = false;      // Rule 6
+    public bool ruleReshuffle = false;      // Rule 7
+    public bool ruleJoker = false;          // Rule 8
+    public bool rulesCard = false;          // Rule 9
+    public bool ruleDrawHand = false;       // Rule 10
+    public int ruleTurnLimit = 0;           // Rule 11
+    public bool ruleDeckout = false;        // Rule 12
+    public bool ruleOutofCards = false;     // Rule 13
+    public bool ruleLeastCardsWin = false;  // Rule 14
+    public int rulePlayAmount = 0;          // Rule 15
+    public bool rulePlayMatch = false;      // Rule 16
+    public int ruleDrawEarlyEnd = 0;        // Rule 17
+    public List<Rule> rules;                // List of Rules
 
     // ---- AI ----
     public UnityGeminiCardAI geminiAI;
+
     [Header("Turn Messages")]
     public TMP_Text turnMessageText;
 
@@ -109,10 +111,15 @@ public class HandManager : MonoBehaviour
         ruleDrawEarlyEnd = gameRules.ruleDrawEarlyEnd;
         currentGameId = CreateUniqueGameId();
 
-        rules = new List<Rule> {
-            new Rule { Name = "Starting hand size", Enabled = ruleStartHand != 5, OnEnable = () =>
+        rules = new List<Rule>
+        {
+            new Rule
+            {
+                Name = "Starting hand size",
+                Enabled = ruleStartHand != 5,
+                OnEnable = () =>
                 {
-                    ruleStartHand = UnityEngine.Random.Range(1, 10); // random 1-10 cards
+                    ruleStartHand = UnityEngine.Random.Range(1, 10);
                     Debug.Log($"Starting hand size set to {ruleStartHand}");
                 }
             },
@@ -122,19 +129,27 @@ public class HandManager : MonoBehaviour
                 Enabled = ruleDraw > 0,
                 OnEnable = () =>
                 {
-                    ruleDraw = UnityEngine.Random.Range(1, 5); // set draw to random 1-5
+                    ruleDraw = UnityEngine.Random.Range(1, 5);
                     Debug.Log($"Draw each turn set to {ruleDraw}");
                 }
             },
             new Rule { Name = "Points enabled", Enabled = rulePointsEnabled, OnEnable = () => rulePointsEnabled = true },
-            new Rule { Name = "Most points win", Enabled = rulePointsWin, RequiresNames = new List<string> { "Points enabled" }, OnEnable = () => rulePointsWin = true },
-            new Rule {
+            new Rule
+            {
+                Name = "Most points win",
+                Enabled = rulePointsWin,
+                RequiresNames = new List<string> { "Points enabled" },
+                OnEnable = () => rulePointsWin = true
+            },
+            new Rule
+            {
                 Name = "Game ends on points",
                 Enabled = rulePointsEnd,
                 RequiresNames = new List<string> { "Points enabled" },
-                OnEnable = () => {
+                OnEnable = () =>
+                {
                     rulePointsEnd = true;
-                    pointEndLimit = UnityEngine.Random.Range(50, 300); // set point end to random 50-300
+                    pointEndLimit = UnityEngine.Random.Range(50, 300);
                     Debug.Log($"Points to reach set to {pointEndLimit}");
                 }
             },
@@ -144,7 +159,7 @@ public class HandManager : MonoBehaviour
                 Enabled = ruleMaxHand > 0,
                 OnEnable = () =>
                 {
-                    ruleMaxHand = UnityEngine.Random.Range(1, 8); // set max to random 1-8
+                    ruleMaxHand = UnityEngine.Random.Range(1, 8);
                     Debug.Log($"Max hand size set to {ruleMaxHand}");
                 }
             },
@@ -158,7 +173,7 @@ public class HandManager : MonoBehaviour
                 Enabled = ruleTurnLimit > 0,
                 OnEnable = () =>
                 {
-                    ruleTurnLimit = UnityEngine.Random.Range(turn + 3, turn + 8); // set limit to random 3-8 from current turn
+                    ruleTurnLimit = UnityEngine.Random.Range(turn + 3, turn + 8);
                     Debug.Log($"Turn limit set to turn {ruleTurnLimit}");
                 }
             },
@@ -171,7 +186,7 @@ public class HandManager : MonoBehaviour
                 Enabled = rulePlayAmount > 0,
                 OnEnable = () =>
                 {
-                    rulePlayAmount = UnityEngine.Random.Range(1, 3); // set amount to random 1-3
+                    rulePlayAmount = UnityEngine.Random.Range(1, 3);
                     Debug.Log($"Card play max set to {rulePlayAmount}");
                 }
             },
@@ -182,11 +197,12 @@ public class HandManager : MonoBehaviour
                 Enabled = ruleDrawEarlyEnd > 0,
                 OnEnable = () =>
                 {
-                    ruleDrawEarlyEnd = UnityEngine.Random.Range(1, 3); // set amount to random 1-3
+                    ruleDrawEarlyEnd = UnityEngine.Random.Range(1, 3);
                     Debug.Log($"Card draw early set to {ruleDrawEarlyEnd}");
                 }
             }
         };
+
         deck = new Deck();
         if (ruleJoker) deck.AddJoker();
         if (rulesCard) deck.AddRules();
@@ -204,11 +220,14 @@ public class HandManager : MonoBehaviour
             endTurnButton.onClick.AddListener(OnEndTurnButtonPressed);
 
         if (jokerPanel != null)
-            jokerPanel.SetActive(false); // hide panel initially
+            jokerPanel.SetActive(false);
+
         if (winPanel != null)
             winPanel.SetActive(false);
+
         if (losePanel != null)
             losePanel.SetActive(false);
+
         if (!rulePointsEnabled)
         {
             playerPoints.text = "";
@@ -219,8 +238,12 @@ public class HandManager : MonoBehaviour
             playerPoints.text = "Player: 0 points";
             AIPoints.text = "AI: 0 points";
         }
-        if (ruleTurnLimit > 0) turnNumber.text = $"turn : {turn + 1}";
-        warningMessage.text = "";
+
+        if (ruleTurnLimit > 0)
+            turnNumber.text = $"turn : {turn + 1}";
+
+        if (warningMessage != null)
+            warningMessage.text = "";
 
         StartCoroutine(PrimeAIOnStartup());
     }
@@ -306,7 +329,7 @@ public class HandManager : MonoBehaviour
             cg.blocksRaycasts = false;
         }
     }
-    
+
     void OnCardClicked(int index)
     {
         RectTransform rt = cardParent.GetChild(index).GetComponent<RectTransform>();
@@ -341,7 +364,8 @@ public class HandManager : MonoBehaviour
     {
         if (selectedCards.Count == 0 && ruleDrawEarlyEnd == 0)
         {
-            warningMessage.text = "No cards selected!";
+            if (warningMessage != null)
+                warningMessage.text = "No cards selected!";
             Debug.Log("No cards selected!");
             return;
         }
@@ -354,7 +378,8 @@ public class HandManager : MonoBehaviour
 
         if (rulePlayAmount > 0 && selectedCards.Count != rulePlayAmount)
         {
-            warningMessage.text = $"You must select {rulePlayAmount} cards.";
+            if (warningMessage != null)
+                warningMessage.text = $"You must select {rulePlayAmount} cards.";
             Debug.Log($"You must play {rulePlayAmount} cards.");
             return;
         }
@@ -370,7 +395,6 @@ public class HandManager : MonoBehaviour
                 bool isJoker = c.Rank == Rank.Joker || c.Rank == Rank.Joker2;
                 bool discardIsJoker = discard.Rank == Rank.Joker || discard.Rank == Rank.Joker2;
 
-                // Only require matching when neither card is a joker
                 if (!isJoker && !discardIsJoker)
                 {
                     bool matchesRank = c.Rank == discard.Rank;
@@ -378,7 +402,8 @@ public class HandManager : MonoBehaviour
 
                     if (!matchesRank && !matchesSuit)
                     {
-                        warningMessage.text = "You must play card(s) matching the discard card.";
+                        if (warningMessage != null)
+                            warningMessage.text = "You must play card(s) matching the discard card.";
                         Debug.Log("You must play a card matching the discard card.");
                         return;
                     }
@@ -393,9 +418,12 @@ public class HandManager : MonoBehaviour
         {
             currentJokerIndex = jokerIdx;
             jokerPanel.SetActive(true);
-            return; // Wait for Joker value selection
+            return;
         }
-        warningMessage.text = "";
+
+        if (warningMessage != null)
+            warningMessage.text = "";
+
         StartCoroutine(ValidateAndPlayPlayerTurn());
     }
 
@@ -434,7 +462,7 @@ public class HandManager : MonoBehaviour
                         MeshRenderer mr = cardFront.GetComponent<MeshRenderer>();
                         if (mr != null)
                         {
-                            mr.material = new Material(mr.material); // clone so it doesn't overwrite shared material
+                            mr.material = new Material(mr.material);
                             mr.material.mainTexture = tex;
                         }
                         else
@@ -452,25 +480,27 @@ public class HandManager : MonoBehaviour
                 visualCard.transform.rotation = Quaternion.Euler(90, 0, 0);
                 Animator anim = visualCard.GetComponent<Animator>();
                 if (anim != null)
-                {
                     anim.SetTrigger("playerPlay");
-                }
-                // Wait for a short time before spawning the next card
+
                 yield return new WaitForSeconds(0.2f);
                 audioSource.clip = Swish;
                 audioSource.Play();
-                Destroy(visualCard, 1.0f); // destroy after animation finishes
+                Destroy(visualCard, 1.0f);
             }
+
             UpdateHandUI();
         }
+
         selectedCards.Clear();
+
         foreach (var c in playedCards)
             deck.AddToDiscard(c);
 
         UpdateDiscardTopCard();
         UpdateHandUI();
 
-        if (ruleOutofCards && playerHand.Count == 0 && !rulePointsEnabled) EndGame();
+        if (ruleOutofCards && playerHand.Count == 0 && !rulePointsEnabled)
+            EndGame();
 
         FinishTurn();
     }
@@ -496,6 +526,7 @@ public class HandManager : MonoBehaviour
             FinishTurn();
             yield break;
         }
+
         string[] Parts = AIIndices.Split('-');
         List<int> AISelectedCards = Parts.Select(s => int.Parse(s)).ToList();
         playedCards.Clear();
@@ -528,7 +559,7 @@ public class HandManager : MonoBehaviour
                             MeshRenderer mr = cardFront.GetComponent<MeshRenderer>();
                             if (mr != null)
                             {
-                                mr.material = new Material(mr.material); // clone so it doesn't overwrite shared material
+                                mr.material = new Material(mr.material);
                                 mr.material.mainTexture = tex;
                             }
                             else
@@ -546,10 +577,8 @@ public class HandManager : MonoBehaviour
                     visualCard.transform.rotation = Quaternion.Euler(90, 0, 0);
                     Animator anim = visualCard.GetComponent<Animator>();
                     if (anim != null)
-                    {
                         anim.SetTrigger("enemyPlay");
-                    }
-                    // Wait for a short time before spawning the next card
+
                     yield return new WaitForSeconds(0.5f);
                     audioSource.clip = Swish;
                     audioSource.Play();
@@ -558,6 +587,7 @@ public class HandManager : MonoBehaviour
                 UpdateHandUI();
             }
         }
+
         foreach (var c in playedCards) deck.AddToDiscard(c);
         UpdateDiscardTopCard();
         UpdateHandUI();
@@ -605,6 +635,7 @@ public class HandManager : MonoBehaviour
                 }
                 turnPoints += val;
             }
+
             if (isAITurn)
             {
                 totalAIPoints += turnPoints;
@@ -617,6 +648,7 @@ public class HandManager : MonoBehaviour
                 playerPoints.text = $"Player: {totalPoints} points";
                 Debug.Log($"Turn points: {turnPoints}, Total points: {totalPoints}");
             }
+
             UpdateDiscardTopCard();
 
             if (rulePointsEnd && (totalPoints >= pointEndLimit || totalAIPoints >= pointEndLimit)) EndGame();
@@ -625,6 +657,7 @@ public class HandManager : MonoBehaviour
 
             if (ruleOutofCards && playerHand.Count == 0) EndGame();
         }
+
         if (!isAITurn) StartCoroutine(AITurn());
         isAITurn = false;
     }
@@ -648,7 +681,7 @@ public class HandManager : MonoBehaviour
         LogAIHand("Before AI chooses move");
 
         GeminiRequest req = BuildAITurnRequest();
-         
+
         GeminiResponse aiMoveResponse = null;
         yield return StartCoroutine(SendAIRequestWithRetry(req, aiMaxAttempts, response => aiMoveResponse = response));
 
@@ -659,7 +692,6 @@ public class HandManager : MonoBehaviour
         {
             LogSelectedAIIndices("Parsed Gemini selection", aiIndices);
 
-            // ✅ LOCAL VALIDATION
             if (AreSelectedAICardsLocallyValid(aiIndices, out string localReason))
             {
                 aiCardsToPlay = BuildIndicesString(aiIndices);
@@ -675,7 +707,6 @@ public class HandManager : MonoBehaviour
             Debug.LogWarning("AI returned invalid format or indices.");
         }
 
-        // ✅ FALLBACK
         if (string.IsNullOrWhiteSpace(aiCardsToPlay))
         {
             Debug.LogWarning("AI error or invalid move. Falling back to local valid selection.");
@@ -689,8 +720,6 @@ public class HandManager : MonoBehaviour
                 LogSelectedAIIndices("Fallback selection", fallbackIndices);
             }
         }
-
-               
 
         PlayAICards(aiCardsToPlay);
 
@@ -754,30 +783,7 @@ public class HandManager : MonoBehaviour
 
     private GeminiRequest BuildAITurnRequest()
     {
-
-
         List<string> aiRules = GetActiveRulesForAI();
-        /*aiRules.Add("IMPORTANT RESPONSE FORMAT: discardReturn may contain MULTIPLE card indexes.");
-        aiRules.Add("If you want to play more than one card, return all chosen indexes separated with '-' such as 0-2 or 1-3-4.");
-        aiRules.Add(rulePlayAmount > 0
-            ? $"You must return exactly {rulePlayAmount} indexes in discardReturn."
-            : "You may return one or more indexes in discardReturn. Prefer a valid multi-card play when that is sensible under the current rules.");*/
-        aiRules.Add("updatedHand should list the hand after removing every played card, not just one card.");
-        aiRules.Add("IMPORTANT JSON RULE: action must be the string PLAY.");
-        aiRules.Add("IMPORTANT JSON RULE: discardReturn must be a STRING such as \"0\" or \"0-2\", never an array like [0] or [0,2].");
-
-        if (rulePlayAmount > 0)
-        {
-            aiRules.Add($"IMPORTANT: You must play EXACTLY {rulePlayAmount} card(s).");
-            aiRules.Add($"IMPORTANT: discardReturn must contain EXACTLY {rulePlayAmount} index value(s), no more and no fewer.");
-            aiRules.Add("If you return too many or too few indexes, the move is invalid.");
-        }
-        else
-        {
-            aiRules.Add("discardReturn may contain one or more card indexes.");
-            aiRules.Add("If you want to play more than one card, return all chosen indexes separated with '-' such as 0-2 or 1-3-4.");
-        }
-
 
         Debug.Log("[AI DEBUG] Building AI turn request...");
         Debug.Log("[AI DEBUG] Game ID: " + currentGameId);
@@ -785,15 +791,10 @@ public class HandManager : MonoBehaviour
         Debug.Log("[AI DEBUG] Active rules: " + string.Join(" | ", aiRules));
         Debug.Log("[AI DEBUG] AI hand being sent: " + string.Join(", ", AIHand.Select((c, i) => $"[{i}] {c}")));
 
-
         return new GeminiRequest
         {
             gameId = currentGameId,
-            /* instruction = "You are a player in a card game. Your goal is to play as well as possible to win the game. The gameId uniquely identifies the current match. Using the rules listed in rules, the cards in your hand in playerHand, and the top discard in discardTop, choose your move. Return ONLY JSON. For discardReturn, return the card index or indexes from your current hand, separated with '-' and starting from 0. Examples: 2 or 0-2 or 1-3-4. If multiple cards are played, include ALL played card indexes in discardReturn.", */
-            /*instruction = "You are a player in a card game. Choose a move that is fully legal under the listed rules. Follow the rules exactly. Return ONLY JSON. discardReturn must contain only indexes from your current hand, starting from 0. If the rules require exactly N cards, return exactly N indexes and no others. Never return an illegal move. If no legal move exists and ending the turn without playing is allowed, return an empty discardReturn.",*/
             instruction = "You are a player in a card game. Choose a move that is fully legal under the listed rules. Follow the rules exactly. Return ONLY JSON in this exact format: {\"action\":\"PLAY\",\"discardReturn\":\"0\",\"updatedHand\":[\"Card A\",\"Card B\"]}. action must be a string. discardReturn must be a STRING, not an array. Use \"0\" for one card or \"0-2\" for multiple cards. If exactly one card must be played, return exactly one index as a string. Never return an illegal move.",
-            /* instruction = "Choose the best legal move. Return ONLY JSON: {\"action\":\"PLAY\",\"discardReturn\":\"0\",\"updatedHand\":[\"Card A\"]}. action must be PLAY. discardReturn must be a string, never an array. Use \"0\" for one card, \"0-2\" for multiple cards, or \"\" if no card is played."; */
-
             rules = new GeminiRules
             {
                 rules = aiRules
@@ -804,6 +805,7 @@ public class HandManager : MonoBehaviour
         };
     }
 
+    // ---- HUMAN MOVE VALIDATION: LOCAL ONLY ----
     private IEnumerator ValidateAndPlayPlayerTurn()
     {
         if (gameEnd || isAITurn)
@@ -811,10 +813,9 @@ public class HandManager : MonoBehaviour
 
         endTurnButton.interactable = false;
 
-        GeminiResponse validationResponse = null;
-        yield return StartCoroutine(ValidateMoveWithAI(true, playerHand, selectedCards.OrderBy(i => i).ToList(), "Player", response => validationResponse = response));
+        List<int> orderedIndices = selectedCards.OrderBy(i => i).ToList();
 
-        if (!IsValidationSuccessful(validationResponse, out string validationMessage))
+        if (!AreSelectedPlayerCardsLocallyValid(orderedIndices, out string validationMessage))
         {
             string message = string.IsNullOrWhiteSpace(validationMessage)
                 ? "Invalid move. Please take your go again."
@@ -830,6 +831,7 @@ public class HandManager : MonoBehaviour
         PlaySelectedCards();
     }
 
+    // Left in place for safety, but no longer used by human move validation
     private IEnumerator ValidateMoveWithAI(bool isPlayerMove, List<Card> hand, List<int> indices, string actorName, Action<GeminiResponse> onComplete)
     {
         if (geminiAI == null)
@@ -947,7 +949,6 @@ public class HandManager : MonoBehaviour
         return description;
     }
 
-    
     private List<string> GetValidationRulesForAI(bool isPlayerMove, int handCount)
     {
         List<string> validationRules = new List<string>(GetActiveRulesForAI());
@@ -962,7 +963,7 @@ public class HandManager : MonoBehaviour
 
         return validationRules;
     }
-    
+
     private bool TryParseCardIndices(string value, int handCount, out List<int> indices)
     {
         indices = new List<int>();
@@ -990,6 +991,62 @@ public class HandManager : MonoBehaviour
 
         if (rulePlayAmount > 0 && indices.Count != rulePlayAmount)
             return false;
+
+        return true;
+    }
+
+    private bool AreSelectedPlayerCardsLocallyValid(List<int> indices, out string reason)
+    {
+        reason = "";
+
+        if (indices == null || indices.Count == 0)
+        {
+            if (ruleDrawEarlyEnd > 0)
+                return true;
+
+            reason = "No cards selected.";
+            return false;
+        }
+
+        if (rulePlayAmount > 0 && indices.Count != rulePlayAmount)
+        {
+            reason = $"You must play exactly {rulePlayAmount} cards.";
+            return false;
+        }
+
+        foreach (int idx in indices)
+        {
+            if (idx < 0 || idx >= playerHand.Count)
+            {
+                reason = $"Selected out-of-range index {idx}.";
+                return false;
+            }
+        }
+
+        if (rulePlayMatch && deck.PeekDiscard() != null)
+        {
+            Card discard = deck.PeekDiscard();
+
+            foreach (int idx in indices)
+            {
+                Card c = playerHand[idx];
+
+                bool isJoker = c.Rank == Rank.Joker || c.Rank == Rank.Joker2;
+                bool discardIsJoker = discard.Rank == Rank.Joker || discard.Rank == Rank.Joker2;
+
+                if (!isJoker && !discardIsJoker)
+                {
+                    bool matchesRank = c.Rank == discard.Rank;
+                    bool matchesSuit = c.Suit == discard.Suit;
+
+                    if (!matchesRank && !matchesSuit)
+                    {
+                        reason = $"Card [{idx}] {c} does not match discard {discard}.";
+                        return false;
+                    }
+                }
+            }
+        }
 
         return true;
     }
@@ -1050,7 +1107,6 @@ public class HandManager : MonoBehaviour
         return true;
     }
 
-
     private string BuildIndicesString(IEnumerable<int> indices)
     {
         return string.Join("-", indices);
@@ -1066,7 +1122,6 @@ public class HandManager : MonoBehaviour
         for (int i = 0; i < AIHand.Count; i++)
         {
             Card c = AIHand[i];
-
             bool valid = true;
 
             if (rulePlayMatch && deck.PeekDiscard() != null)
@@ -1113,13 +1168,10 @@ public class HandManager : MonoBehaviour
         }
         else
         {
-            // simple legal fallback: just play one valid card
             return BuildIndicesString(new List<int> { validIndices[0] });
         }
     }
-    /* ----- */
 
-    
     private void ShowTurnMessage(string message)
     {
         if (turnMessageText != null)
@@ -1160,50 +1212,53 @@ public class HandManager : MonoBehaviour
         }
     }
 
-
     // ---- Ending the game ----
     void EndGame()
     {
-        Debug.Log($"Game Over!");
+        Debug.Log("Game Over!");
         bool playerWin = false;
+
         if (rulePointsWin)
         {
             if (totalPoints > totalAIPoints)
             {
-                Debug.Log($"Player Wins!");
+                Debug.Log("Player Wins!");
                 playerWin = true;
             }
-            else if (totalAIPoints > totalPoints) Debug.Log($"AI Wins!");
+            else if (totalAIPoints > totalPoints) Debug.Log("AI Wins!");
             else if (ruleLeastCardsWin)
             {
                 if (playerHand.Count < AIHand.Count)
                 {
-                    Debug.Log($"Player Wins!");
+                    Debug.Log("Player Wins!");
                     playerWin = true;
                 }
-                else if (playerHand.Count > AIHand.Count) Debug.Log($"AI Wins!");
-                else Debug.Log($"It was a tie!");
+                else if (playerHand.Count > AIHand.Count) Debug.Log("AI Wins!");
+                else Debug.Log("It was a tie!");
             }
-            else Debug.Log($"It was a tie!");
+            else Debug.Log("It was a tie!");
         }
         else if (ruleLeastCardsWin)
         {
             if (playerHand.Count < AIHand.Count)
             {
-                Debug.Log($"Player Wins!");
+                Debug.Log("Player Wins!");
                 playerWin = true;
             }
-            else if (playerHand.Count > AIHand.Count) Debug.Log($"AI Wins!");
-            else Debug.Log($"It was a tie!");
+            else if (playerHand.Count > AIHand.Count) Debug.Log("AI Wins!");
+            else Debug.Log("It was a tie!");
         }
+
         endTurnButton.interactable = false;
         ruleDraw = 0;
         ruleDrawHand = false;
+
         foreach (Transform child in cardParent)
         {
             Button btn = child.GetComponent<Button>();
             if (btn != null) btn.interactable = false;
         }
+
         if (playerWin == true)
         {
             winPanel.SetActive(true);
@@ -1216,6 +1271,7 @@ public class HandManager : MonoBehaviour
             audioSource.clip = Lose;
             audioSource.Play();
         }
+
         gameEnd = true;
     }
 
@@ -1239,7 +1295,6 @@ public class HandManager : MonoBehaviour
                 else if (ruleReshuffle && deck.DiscardCount > 0) Reshuffle();
                 else
                 {
-                    // Can't draw more cards
                     break;
                 }
             }
@@ -1251,16 +1306,15 @@ public class HandManager : MonoBehaviour
                 {
                     playerHand.Add(c);
 
-                    // ---- Spawn visual card ----
                     if (cardVisualPrefab != null && playAreaParent != null)
                     {
                         GameObject visualCard = Instantiate(
                             cardVisualPrefab,
-                            playAreaParent.position, // spawn at deck position
+                            playAreaParent.position,
                             Quaternion.identity,
                             playAreaParent
                         );
-                        // Assign the correct texture
+
                         if (cardTextureDict.TryGetValue(GetCardKey(c), out Texture2D tex))
                         {
                             Transform cardFront = visualCard.transform.Find("CardFront");
@@ -1269,7 +1323,7 @@ public class HandManager : MonoBehaviour
                                 MeshRenderer mr = cardFront.GetComponent<MeshRenderer>();
                                 if (mr != null)
                                 {
-                                    mr.material = new Material(mr.material); // clone so it doesn't overwrite shared material
+                                    mr.material = new Material(mr.material);
                                     mr.material.mainTexture = tex;
                                 }
                                 else
@@ -1281,18 +1335,17 @@ public class HandManager : MonoBehaviour
                             {
                                 Debug.LogError("CardFront child not found on visualCard prefab!");
                             }
-
                         }
 
                         visualCard.transform.localScale = Vector3.one * 0.2f;
                         visualCard.transform.rotation = Quaternion.Euler(90, 0, 0);
                         Animator anim = visualCard.GetComponent<Animator>();
                         if (anim != null)
-                        {
                             anim.SetTrigger("playerDraw");
-                        }
+
                         Destroy(visualCard, 1.0f);
                     }
+
                     yield return new WaitForSeconds(0.2f);
                     audioSource.clip = Swish;
                     audioSource.Play();
@@ -1302,8 +1355,6 @@ public class HandManager : MonoBehaviour
         }
 
         Debug.Log($"There are {deck.Count} cards left in the deck");
-
-        // Update UI after all cards drawn
         UpdateHandUI();
     }
 
@@ -1329,10 +1380,10 @@ public class HandManager : MonoBehaviour
                 }
                 else
                 {
-                    // Can't draw more cards
                     break;
                 }
             }
+
             if (AIHand.Count < ruleMaxHand || ruleMaxHand == 0)
             {
                 Card c = deck.Draw();
@@ -1343,7 +1394,7 @@ public class HandManager : MonoBehaviour
                     {
                         GameObject visualCard = Instantiate(
                             cardVisualPrefab,
-                            playAreaParent.position, // spawn at deck position
+                            playAreaParent.position,
                             Quaternion.identity,
                             playAreaParent
                         );
@@ -1370,8 +1421,8 @@ public class HandManager : MonoBehaviour
     {
         return Sprite.Create(
             texture,
-            new Rect(0, 0, texture.width, texture.height), // full texture
-            new Vector2(0.5f, 0.5f) // pivot in center
+            new Rect(0, 0, texture.width, texture.height),
+            new Vector2(0.5f, 0.5f)
         );
     }
 
@@ -1390,28 +1441,25 @@ public class HandManager : MonoBehaviour
         );
     }
 
-
     void LoadCardTextures()
     {
         cardTextureDict.Clear();
         foreach (Texture2D tex in cardTextures)
         {
             if (tex == null) continue;
+
             string key;
             if (tex.name.StartsWith("Joker"))
             {
-                // Keep Joker names as-is
-                key = tex.name; // e.g., "Joker cards-R"
+                key = tex.name;
             }
             else if (tex.name.StartsWith("Rules"))
             {
-                // Keep Rules card name as-is
-                key = tex.name; // e.g., "Rules card"
+                key = tex.name;
             }
             else
             {
-                // Normal cards
-                key = tex.name.Replace(" cards-", "-"); // "Spade cards-6" -> "Spade-6"
+                key = tex.name.Replace(" cards-", "-");
             }
             cardTextureDict[key] = tex;
         }
@@ -1440,6 +1488,7 @@ public class HandManager : MonoBehaviour
     {
         StartCoroutine(ReshuffleCoroutine());
     }
+
     private IEnumerator ReshuffleCoroutine()
     {
         if (deck.DiscardCount == 0) yield break;
@@ -1450,7 +1499,7 @@ public class HandManager : MonoBehaviour
         audioSource.clip = Shuffle;
         audioSource.Play();
 
-        yield return new WaitForSeconds(4.0f); // Wait for animation duration
+        yield return new WaitForSeconds(4.0f);
 
         deck.Reshuffle();
     }
@@ -1480,62 +1529,64 @@ public class HandManager : MonoBehaviour
         }
     }
 
+    // ---- SHORTENED RULES ONLY ----
     public List<string> GetActiveRulesForAI()
     {
         List<string> aiRules = new List<string>();
 
-        if (ruleStartHand != 5) // assume default 5 means inactive
-            aiRules.Add($"Starting hand size is {ruleStartHand} cards.");
+        if (ruleStartHand != 5)
+            aiRules.Add($"Start hand: {ruleStartHand}");
 
         if (ruleDraw > 0)
-            aiRules.Add($"Draw {ruleDraw} card(s) each turn.");
+            aiRules.Add($"Draw each turn: {ruleDraw}");
 
         if (ruleMaxHand > 0)
-            aiRules.Add($"Maximum hand size is {ruleMaxHand} card(s).");
+            aiRules.Add($"Max hand: {ruleMaxHand}");
 
         if (rulePointsEnabled)
-            aiRules.Add("You gain points equal to value of cards.");
+            aiRules.Add("Points enabled");
 
         if (rulePointsEnd)
-            aiRules.Add($"The game ends when a player reaches {pointEndLimit} points.");
+            aiRules.Add($"End at {pointEndLimit} points");
 
         if (rulePointsWin)
-            aiRules.Add("The player with the most points wins.");
+            aiRules.Add("Most points wins");
 
         if (ruleReshuffle)
-            aiRules.Add("The deck reshuffles automatically when empty.");
+            aiRules.Add("Reshuffle when deck empty");
 
         if (ruleJoker)
-            aiRules.Add("Jokers are enabled and can be played with custom values (A-K).");
+            aiRules.Add("Jokers enabled");
 
         if (rulesCard)
-            aiRules.Add("Special Rules cards are enabled in the game. Rules cards add a rule to the game when played and are worth 0 points (if points are on).");
+            aiRules.Add("Rules card enabled");
 
         if (ruleDrawHand)
-            aiRules.Add($"On turn start, you draw cards up to the starting hand amount {ruleStartHand}.");
+            aiRules.Add($"Draw to {ruleStartHand}");
 
         if (ruleTurnLimit > 0)
-            aiRules.Add($"Game will end after turn {ruleTurnLimit}.");
+            aiRules.Add($"Turn limit: {ruleTurnLimit}");
 
         if (ruleDeckout)
-            aiRules.Add("Game will end when the deck runs out of cards.");
+            aiRules.Add("Deckout ends game");
 
         if (ruleOutofCards)
-            aiRules.Add("Game will end when you run out of cards in your hand.");
+            aiRules.Add("Out of cards ends game");
 
         if (ruleLeastCardsWin)
-            aiRules.Add("Win the game by having the least cards in hand when the game ends.");
+            aiRules.Add("Least cards wins");
 
         if (rulePlayAmount > 0)
-            aiRules.Add($"You MUST play EXACTLY {rulePlayAmount} cards per turn. Seperate each card played with a '-' (example for 3 cards: 0-2-3 etc).");
+            aiRules.Add($"Play exactly {rulePlayAmount}");
         else
-            aiRules.Add($"You can play any number of cards per turn. You MUST play at least 1 card. Seperate each card played with a '-' (example for 3 cards: 0-2-3 etc).");
+            aiRules.Add("Play at least 1");
 
         if (rulePlayMatch)
-            aiRules.Add("All cards you play MUST match the discarded card in some way, either through suit or value. (Example: you can play a 2 of clubs on a 2 of hearts, you play a queen of diamonds on a 7 of diamonds.) Anything can be played on jokers and jokers can be played on anything.");
-        
+            aiRules.Add("Cards must match discard by suit or rank unless joker");
+
         if (ruleDrawEarlyEnd > 0)
-            aiRules.Add($"You can end your turn without playing cards, but if you do you will draw {ruleDrawEarlyEnd} cards.");
+            aiRules.Add($"No play = draw {ruleDrawEarlyEnd}");
+
         return aiRules;
     }
 
@@ -1593,8 +1644,8 @@ public class HandManager : MonoBehaviour
 
         public Card PeekDiscard()
         {
-            if (discardPile.Count == 0) return null; // empty discard
-            return discardPile[discardPile.Count - 1];    // last card = top of discard
+            if (discardPile.Count == 0) return null;
+            return discardPile[discardPile.Count - 1];
         }
 
         public void Shuffle()
@@ -1626,10 +1677,10 @@ public class HandManager : MonoBehaviour
     public class Rule
     {
         public string Name;
-        public bool Enabled;                  // Whether the rule is currently active
-        public List<string> RequiresNames;    // Other rules that must be enabled first
-        public Action OnEnable;               // Action when the rule is enabled
-        public Action OnDisable;              // Action when the rule is disabled
+        public bool Enabled;
+        public List<string> RequiresNames;
+        public Action OnEnable;
+        public Action OnDisable;
 
         public void Enable()
         {
