@@ -20,6 +20,7 @@ public class HandManager : MonoBehaviour
     public TextMeshProUGUI playerPoints;
     public TextMeshProUGUI AIPoints;
     public TextMeshProUGUI turnNumber;
+    public TextMeshProUGUI warningMessage;
     public Image discardTopCardImage;
     public Texture2D[] cardTextures;
     public Dictionary<string, Texture2D> cardTextureDict = new Dictionary<string, Texture2D>();
@@ -219,6 +220,7 @@ public class HandManager : MonoBehaviour
             AIPoints.text = "AI: 0 points";
         }
         if (ruleTurnLimit > 0) turnNumber.text = $"turn : {turn + 1}";
+        warningMessage.text = "";
 
         StartCoroutine(PrimeAIOnStartup());
     }
@@ -339,6 +341,7 @@ public class HandManager : MonoBehaviour
     {
         if (selectedCards.Count == 0 && ruleDrawEarlyEnd == 0)
         {
+            warningMessage.text = "No cards selected!";
             Debug.Log("No cards selected!");
             return;
         }
@@ -351,6 +354,7 @@ public class HandManager : MonoBehaviour
 
         if (rulePlayAmount > 0 && selectedCards.Count != rulePlayAmount)
         {
+            warningMessage.text = $"You must select {rulePlayAmount} cards.";
             Debug.Log($"You must play {rulePlayAmount} cards.");
             return;
         }
@@ -374,6 +378,7 @@ public class HandManager : MonoBehaviour
 
                     if (!matchesRank && !matchesSuit)
                     {
+                        warningMessage.text = "You must play card(s) matching the discard card.";
                         Debug.Log("You must play a card matching the discard card.");
                         return;
                     }
@@ -390,7 +395,7 @@ public class HandManager : MonoBehaviour
             jokerPanel.SetActive(true);
             return; // Wait for Joker value selection
         }
-
+        warningMessage.text = "";
         StartCoroutine(ValidateAndPlayPlayerTurn());
     }
 

@@ -8,6 +8,7 @@ public class Presets : MonoBehaviour
     public TextMeshProUGUI descriptionText;
 
     public Button UnoRulesButton;
+    public Button UnoRulesX2Button;
     public Button OneCardButton;
     public Button ResetButton;
 
@@ -30,6 +31,29 @@ public class Presets : MonoBehaviour
         gameRules.ruleOutofCards = true;
         gameRules.ruleLeastCardsWin = true;
         gameRules.rulePlayAmount = 1;
+        gameRules.rulePlayMatch = true;
+        gameRules.ruleDrawEarlyEnd = 1;
+    }
+
+    public void EnableUnoX2()
+    {
+        descriptionText.text = "UnoX2 rules have been applied.";
+        gameRules.ruleJoker = true;
+        gameRules.rulesCard = false;
+        gameRules.ruleReshuffle = true;
+        gameRules.ruleStartHand = 9;
+        gameRules.ruleDraw = 0;
+        gameRules.ruleMaxHand = 0;
+        gameRules.rulePointsEnabled = false;
+        gameRules.rulePointsEnd = false;
+        gameRules.rulePointsWin = false;
+        gameRules.pointEndLimit = 0;
+        gameRules.ruleDrawHand = false;
+        gameRules.ruleTurnLimit = 0;
+        gameRules.ruleDeckout = false;
+        gameRules.ruleOutofCards = true;
+        gameRules.ruleLeastCardsWin = true;
+        gameRules.rulePlayAmount = 2;
         gameRules.rulePlayMatch = true;
         gameRules.ruleDrawEarlyEnd = 1;
     }

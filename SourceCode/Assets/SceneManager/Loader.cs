@@ -9,7 +9,7 @@ public class Loader : MonoBehaviour
 
     public void LoadSceneByName(string sceneName)
     {
-        if (SceneManager.GetActiveScene().name == "MainScene")
+        if (SceneManager.GetActiveScene().name == "PlayScene")
         {
             SceneManager.LoadScene(sceneName);
             return;
