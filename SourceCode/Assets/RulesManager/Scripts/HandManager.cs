@@ -1,3 +1,12 @@
+// ================================================
+// HandManager.cs
+//
+// This script manages the player's hand, AI hand, and the core game logic for a card game in Unity.
+// It handles UI updates, player interactions, AI decision-making, and enforces game rules.
+// The script is designed to be flexible and supports various rule configurations through a ScriptableObject.
+//
+// ==================================================
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -330,6 +339,7 @@ public class HandManager : MonoBehaviour
         }
     }
 
+    // ---- Card click handling ----
     void OnCardClicked(int index)
     {
         RectTransform rt = cardParent.GetChild(index).GetComponent<RectTransform>();
@@ -433,6 +443,9 @@ public class HandManager : MonoBehaviour
         StartCoroutine(PlaySelectedCardsCoroutine());
     }
 
+    // This coroutine handles the animation and timing of playing cards,
+    // as well as updating the game state after the play.
+
     private IEnumerator PlaySelectedCardsCoroutine()
     {
         playedCards.Clear();
@@ -491,6 +504,7 @@ public class HandManager : MonoBehaviour
             UpdateHandUI();
         }
 
+        // After all cards are played, move them to the discard pile and update the game state
         selectedCards.Clear();
 
         foreach (var c in playedCards)
@@ -504,12 +518,14 @@ public class HandManager : MonoBehaviour
 
         FinishTurn();
     }
-
+    
+    // AI card playing
     void PlayAICards(string AIIndices)
     {
         StartCoroutine(PlayAICardsoroutine(AIIndices));
     }
 
+    // This coroutine handles the animation and timing of the AI playing cards, 
     private IEnumerator PlayAICardsoroutine(string AIIndices)
     {
         Debug.Log("Coroutine started");
@@ -662,6 +678,7 @@ public class HandManager : MonoBehaviour
         isAITurn = false;
     }
 
+    // ---- AI Turn ----
     System.Collections.IEnumerator AITurn()
     {
         yield return new WaitForSeconds(0.5f);
@@ -679,6 +696,10 @@ public class HandManager : MonoBehaviour
         endTurnButton.interactable = false;
 
         LogAIHand("Before AI chooses move");
+
+        // Build the Gemini request with current game state and rules
+        // Gemini was replaced with groq but routine name left for consistency and to avoid breaking changes,
+        // as well as in case of future reuse with Gemini or other AIs
 
         GeminiRequest req = BuildAITurnRequest();
 
@@ -721,6 +742,7 @@ public class HandManager : MonoBehaviour
             }
         }
 
+        
         PlayAICards(aiCardsToPlay);
 
         int playedCount = string.IsNullOrWhiteSpace(aiCardsToPlay) ? 0 : aiCardsToPlay.Split('-').Length;
@@ -741,6 +763,9 @@ public class HandManager : MonoBehaviour
             endTurnButton.interactable = true;
         }
     }
+
+    // This method sends a simple "prime" request to the AI on game startup to help ensure
+    // it's responsive before the first real move is needed.
 
     private IEnumerator PrimeAIOnStartup()
     {
@@ -775,6 +800,8 @@ public class HandManager : MonoBehaviour
             Debug.LogWarning("AI startup prime failed. Gameplay will still continue and retry later.");
         }
     }
+
+    // Create uniqe gameid using timestamp. This helps ensure that each game session is distinct for AI interactions and logging.
 
     private string CreateUniqueGameId()
     {
@@ -931,6 +958,9 @@ public class HandManager : MonoBehaviour
         };
     }
 
+    // This method checks the AI's validation response to determine if the move is valid according
+    // to the AI's assessment, and extracts any message provided by the AI for feedback purposes.
+
     private bool IsValidationSuccessful(GeminiResponse validationResponse, out string message)
     {
         message = validationResponse != null ? validationResponse.discardReturn : "No validation response received.";
@@ -995,6 +1025,7 @@ public class HandManager : MonoBehaviour
         return true;
     }
 
+    // This method performs local validation of the player's selected card indices against the current game rules and state.
     private bool AreSelectedPlayerCardsLocallyValid(List<int> indices, out string reason)
     {
         reason = "";
@@ -1051,6 +1082,7 @@ public class HandManager : MonoBehaviour
         return true;
     }
 
+    // Similar local validation for AI-selected cards, used as a safety check on the AI's move before executing it.
     private bool AreSelectedAICardsLocallyValid(List<int> indices, out string reason)
     {
         reason = "";
@@ -1106,11 +1138,14 @@ public class HandManager : MonoBehaviour
 
         return true;
     }
-
+    
+    // This method builds a string representation of the selected card indices, used for logging or AI communication.   
     private string BuildIndicesString(IEnumerable<int> indices)
     {
         return string.Join("-", indices);
     }
+
+    // This method constructs a fallback move string for the AI by selecting the first valid card(s) from the AI's hand based on the current rules and game state. It's used when the AI returns an invalid move or fails to respond.
 
     private string BuildFallbackAICards()
     {
@@ -1172,7 +1207,8 @@ public class HandManager : MonoBehaviour
         }
     }
 
-    private void ShowTurnMessage(string message)
+    // Update the UI text element to show messages related to the player's turn, such as validation errors or other feedback. It checks for the presence of a dedicated turn message text element, and if not found, it falls back to using the Gemini AI's UI text if available.
+        private void ShowTurnMessage(string message)
     {
         if (turnMessageText != null)
             turnMessageText.text = message;
@@ -1441,7 +1477,8 @@ public class HandManager : MonoBehaviour
         );
     }
 
-    void LoadCardTextures()
+    // This method loads the card textures into a dictionary for quick access based on card properties. It processes the texture names to create consistent keys that can be used to retrieve the correct texture for each card when updating the UI.
+        void LoadCardTextures()
     {
         cardTextureDict.Clear();
         foreach (Texture2D tex in cardTextures)
@@ -1489,6 +1526,10 @@ public class HandManager : MonoBehaviour
         StartCoroutine(ReshuffleCoroutine());
     }
 
+    // This coroutine handles the reshuffling of the deck when it runs out of cards.
+    // It checks if there are cards in the discard pile to reshuffle back into the deck,
+    // triggers shuffle animations if animators are assigned, plays a shuffle sound effect, waits for the animation to play,
+    // and then performs the actual reshuffling of the deck.
     private IEnumerator ReshuffleCoroutine()
     {
         if (deck.DiscardCount == 0) yield break;
@@ -1610,6 +1651,10 @@ public class HandManager : MonoBehaviour
     }
 
     [Serializable]
+    // The Deck class manages the collection of cards in the game, including the main deck and the discard pile.
+    // It provides methods for resetting the deck, shuffling, drawing cards, adding cards to the discard pile,
+    // peeking at the top of the discard pile, and reshuffling when necessary. The deck is initialized
+    // with a standard set of playing cards, and can optionally include jokers and a rules card based on the game settings.
     public class Deck
     {
         private List<Card> cards = new List<Card>();
@@ -1674,6 +1719,11 @@ public class HandManager : MonoBehaviour
     }
 
     [Serializable]
+    // The Rule class represents a game rule that can be enabled or disabled.
+    // Each rule has a name, an enabled state, a list of other rules it requires to be active,
+    // and optional actions to perform when the rule is enabled or disabled.
+    // The Enable and Disable methods manage the state of the rule and invoke
+    // the corresponding actions while logging the changes.
     public class Rule
     {
         public string Name;
@@ -1712,6 +1762,9 @@ public class HandManager : MonoBehaviour
         Debug.Log($"[AI DEBUG] {label} | AI Hand = {handText}");
     }
 
+    // This method logs the indices of the cards selected by the AI for its move,
+    // along with the corresponding card descriptions.
+    // It provides detailed information for debugging purposes, including handling cases where no indices are selected or when indices are out of range.
     private void LogSelectedAIIndices(string label, List<int> indices)
     {
         if (indices == null || indices.Count == 0)
