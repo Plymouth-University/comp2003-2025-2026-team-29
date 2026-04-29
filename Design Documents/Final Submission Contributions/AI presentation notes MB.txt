@@ -1,0 +1,89 @@
+Slide 1 — AI Integration in CardsRule
+
+Notes:
+
+This section introduces the AI portion of the project. It explains why AI was selected, how the tooling evolved during development, the issues that were encountered, and what the final commercial analysis showed. The focus is not just on functionality, but on real-world viability.
+
+Slide 2 — What the AI Had to Do
+
+Notes:
+
+The AI was not just generating text — it had to behave like a reliable game component. It needed to select valid moves, follow the active rules, respond quickly enough for good user experience, and remain cost-effective at scale. This required structured input and output, as well as validation and error handling to ensure stability.
+
+Slide 3 — Tool Selection
+
+Notes:
+
+The tools were selected based on practical criteria: gameplay fit, response speed, cost, security, and maintainability. The final stack combined Unity for the client, Groq for AI, and Cloudflare for secure API routing and data storage. The key point is that tools were chosen based on real requirements, not trends.
+
+Slide 4 — Initial Implementation: Gemini
+
+Notes:
+
+Gemini was used initially to prove the concept of an AI opponent. It was easy to access and suitable for early testing. However, when integrated into the Unity game, the response time was too slow for smooth gameplay. This highlighted that technical capability alone is not enough — user experience is critical.
+
+Slide 5 — Change from Gemini to Groq
+
+Notes:
+
+The switch to Groq was driven by performance. Testing showed that Groq provided faster and more consistent responses, making it more suitable for a turn-based game. This decision was based on measured experience rather than preference.
+
+Slide 6 — Production Architecture
+
+Notes:
+
+The final architecture routes all AI requests through a Cloudflare Worker. This protects API keys and ensures that the Unity client never communicates directly with the AI provider. The backend controls what data is sent and how responses are handled, improving both security and reliability.
+
+Slide 7 — Security Issue
+
+Notes:
+
+A key issue identified was that API keys cannot be securely stored in a client application. APK files can be inspected, which creates a security risk. The solution was to move all AI communication to a backend layer, making security a core design requirement rather than an afterthought.
+
+Slide 8 — API Creep
+
+Notes:
+
+API creep occurred when more data and more API calls were added over time to solve problems. This included repeatedly sending full game state and rules. While it worked, it increased token usage, latency, and system complexity, making the solution inefficient.
+
+Slide 9 — Token Consumption
+
+Notes:
+
+Token usage directly impacts cost. In this model, each game uses around 6,000 tokens. This results in a very low cost per game, but when scaled across many users, it becomes significant. This makes prompt optimisation an important part of the system design.
+
+Slide 10 — Response Time
+
+Notes:
+
+Response time is a user experience issue, not just a technical metric. Even in a turn-based game, delays are noticeable. Groq was selected because it reduced latency, making gameplay feel smoother. The system also includes timeouts and feedback to prevent the UI appearing frozen.
+
+Slide 11 — Reliability and Validation
+
+Notes:
+
+AI output cannot be trusted directly. The system treats AI as an input, not an authority. All moves are parsed and validated locally in Unity before being applied. This ensures consistent gameplay and avoids the need for additional costly API validation calls.
+
+Slide 12 — Cost Analysis
+
+Notes:
+
+The cost model shows that AI usage is relatively cheap, at around one cent per user per month. However, fixed costs such as development, hosting, and maintenance dominate the break-even calculation. The application requires approximately 185 users to break even.
+
+Slide 13 — Commercial Sensitivity
+
+Notes:
+
+This slide shows that revenue per user has a much greater impact on viability than AI cost. Small changes in monetisation significantly affect break-even, while increased AI usage has only a minor effect. This highlights where the real commercial risk lies.
+
+Slide 14 — Rule-Based Alternative
+
+Notes:
+
+A rule-based opponent offers a simpler and more predictable alternative. It removes API costs and latency but requires more development effort and is less flexible. For a small-scale release, this may be the more commercially viable option.
+
+Slide 15 — Final Evaluation
+
+Notes:
+
+In conclusion, the AI implementation was technically successful and provided valuable flexibility. However, it introduced complexity, cost, and dependency on external services. The final position is that AI should be used where justified, but a rule-based approach remains a practical fallback for smaller deployments.
