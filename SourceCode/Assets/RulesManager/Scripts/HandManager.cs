@@ -1499,9 +1499,9 @@ public class HandManager : MonoBehaviour
         audioSource.clip = Shuffle;
         audioSource.Play();
 
-        yield return new WaitForSeconds(4.0f);
-
         deck.Reshuffle();
+
+        yield return new WaitForSeconds(2.0f);
     }
 
     // ---- Getting value ----
