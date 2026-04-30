@@ -1,4 +1,10 @@
-﻿using System;
+﻿// ===================
+//  HandManager.cs
+// ===================
+
+// Imports
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
@@ -35,12 +41,13 @@ public class UnityGeminiCardAI : MonoBehaviour
 {
     public GeminiResponse latestResponse { get; private set; }
 
-    [Header("Cloudflare Worker Proxy (xAI)")]
+    // 
+    // Latest = effectively Llama 2.0 Grok, but can be overridden by config
     public string workerUrl = "https://grok-proxy.myname.workers.dev";
     public string appSharedSecret = "";
     public string grokModel = "grok-2-latest";
 
-    [Header("Debug UI (optional)")]
+    
     public TMP_Text uiText;
     public TMP_Text debugConsole;
 
@@ -60,6 +67,7 @@ public class UnityGeminiCardAI : MonoBehaviour
         public string prompt;
     }
 
+    // Send to AI
     public void SendToGemini(GeminiRequest req)
     {
         // Hide stack values
@@ -74,6 +82,7 @@ public class UnityGeminiCardAI : MonoBehaviour
         StartCoroutine(SendWorkerRequest(prompt));
     }
 
+    // Build AI prompt, kept lean.
     private string BuildPrompt(GeminiRequest req)
     {
         // Keep this lean for speed
