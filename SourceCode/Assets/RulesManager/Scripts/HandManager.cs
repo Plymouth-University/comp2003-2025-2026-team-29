@@ -30,6 +30,7 @@ public class HandManager : MonoBehaviour
     public TextMeshProUGUI AIPoints;
     public TextMeshProUGUI turnNumber;
     public TextMeshProUGUI warningMessage;
+    public Text passTurnMessage;
     public Image discardTopCardImage;
     public Texture2D[] cardTextures;
     public Dictionary<string, Texture2D> cardTextureDict = new Dictionary<string, Texture2D>();
@@ -254,7 +255,16 @@ public class HandManager : MonoBehaviour
         if (warningMessage != null)
             warningMessage.text = "";
 
-        StartCoroutine(PrimeAIOnStartup());
+        if (ruleDrawEarlyEnd != 0)
+        {
+            passTurnMessage.text = "Draw cards";
+        }
+        else
+        {
+            passTurnMessage.text = "Play cards";
+        }
+
+            StartCoroutine(PrimeAIOnStartup());
     }
 
     // ---- UI Updates ----
@@ -349,12 +359,22 @@ public class HandManager : MonoBehaviour
             selectedCards.Remove(index);
             rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, 60);
             rt.localScale = Vector3.one;
+
+            if (ruleDrawEarlyEnd != 0 && selectedCards.Count == 0)
+            {
+                passTurnMessage.text = "Draw cards";
+            }
         }
         else
         {
             selectedCards.Add(index);
             rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, 80);
             rt.localScale = Vector3.one * 1.1f;
+            
+            if (ruleDrawEarlyEnd != 0)
+            {
+                passTurnMessage.text = "Play cards";
+            }
         }
     }
 
@@ -614,6 +634,7 @@ public class HandManager : MonoBehaviour
     // ---- Ending turn ----
     void FinishTurn()
     {
+        if (ruleDrawEarlyEnd != 0) passTurnMessage.text = "Draw cards";
         // ---- Handle Rules Cards ----
         foreach (var c in playedCards)
         {
@@ -1540,9 +1561,9 @@ public class HandManager : MonoBehaviour
         audioSource.clip = Shuffle;
         audioSource.Play();
 
-        yield return new WaitForSeconds(4.0f);
-
         deck.Reshuffle();
+
+        yield return new WaitForSeconds(2.0f);
     }
 
     // ---- Getting value ----

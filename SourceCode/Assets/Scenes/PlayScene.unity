@@ -4869,6 +4869,7 @@ MonoBehaviour:
   AIPoints: {fileID: 1215076088}
   turnNumber: {fileID: 575372554}
   warningMessage: {fileID: 1248465061}
+  passTurnMessage: {fileID: 276351625}
   discardTopCardImage: {fileID: 550666529}
   cardTextures:
   - {fileID: 2800000, guid: a3277bba2a2d0af4e8e2c1017786f569, type: 3}
